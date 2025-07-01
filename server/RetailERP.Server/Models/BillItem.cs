@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization; // IMPORTANT: Add this using directive for [JsonIgnore]
 
 namespace RetailERP.Server.Models
 {
@@ -14,6 +15,9 @@ namespace RetailERP.Server.Models
         [Required]
         public int BillId { get; set; }
 
+        // Add [JsonIgnore] to break the circular reference when serializing BillItem
+        // This prevents the serializer from going Bill -> Items -> BillItem -> Bill -> ...
+        [JsonIgnore]
         [ForeignKey("BillId")]
         public Bill Bill { get; set; } = default!; // Navigation property
 

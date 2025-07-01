@@ -1,6 +1,8 @@
 // File: C:\Users\bakas\Desktop\Retail ERP\server\RetailERP.Server\Models\Product.cs
 
 using System.ComponentModel.DataAnnotations; // For [Key] attribute
+using System.Collections.Generic; // For ICollection
+using System.Text.Json.Serialization; // IMPORTANT: Add this using directive for [JsonIgnore]
 
 namespace RetailERP.Server.Models
 {
@@ -25,6 +27,9 @@ namespace RetailERP.Server.Models
         public int StockQuantity { get; set; }
 
         // Navigation property for BillItems (a product can be in many bill items)
+        // Add [JsonIgnore] to break the circular reference when serializing Product
+        // This prevents the serializer from going Bill -> BillItem -> Product -> BillItems -> ...
+        [JsonIgnore]
         public ICollection<BillItem> BillItems { get; set; } = new List<BillItem>();
     }
 }
