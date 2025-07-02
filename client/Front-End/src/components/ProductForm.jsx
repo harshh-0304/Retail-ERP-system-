@@ -1,8 +1,9 @@
 // File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\components\ProductForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-function ProductForm({ onProductAdded, onCancel }) {
-  const [product, setProduct] = useState({
+// ProductForm now accepts initialData (for editing) and callbacks for added/updated/cancel
+function ProductForm({ onProductAdded, onProductUpdated, onCancel, initialData }) {
+  const [product, setProduct] = useState(initialData || {
     name: '',
     description: '',
     price: '',
@@ -12,7 +13,18 @@ function ProductForm({ onProductAdded, onCancel }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  const API_URL = 'http://localhost:5219/api/products'; // Confirm your backend's HTTP port
+  // Determine if we are in editing mode
+  const isEditing = !!initialData;
+
+  // Confirm your backend's HTTP port here
+  const API_URL = 'http://localhost:5219/api/products';
+
+  // Effect to update form fields if initialData changes (e.g., when switching product to edit)
+  useEffect(() => {
+    setProduct(initialData || { name: '', description: '', price: '', stockQuantity: '' });
+    setError(null); // Clear errors when data changes
+    setSuccess(false); // Clear success when data changes
+  }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,8 +55,11 @@ function ProductForm({ onProductAdded, onCancel }) {
     };
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
+      const method = isEditing ? 'PUT' : 'POST';
+      const url = isEditing ? `${API_URL}/${product.id}` : API_URL;
+
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -56,17 +71,24 @@ function ProductForm({ onProductAdded, onCancel }) {
         throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
       }
 
-      const newProduct = await response.json();
+      const updatedOrNewProduct = await response.json();
       setSuccess(true);
-      setProduct({ name: '', description: '', price: '', stockQuantity: '' }); // Clear form
-      if (onProductAdded) {
-        onProductAdded(newProduct); // Notify parent component that a product was added
+
+      if (!isEditing) {
+        setProduct({ name: '', description: '', price: '', stockQuantity: '' }); // Clear form only if adding new
+        if (onProductAdded) {
+          onProductAdded(updatedOrNewProduct); // Notify parent for new product
+        }
+      } else {
+        if (onProductUpdated) {
+          onProductUpdated(updatedOrNewProduct); // Notify parent for updated product
+        }
       }
-      // Optionally hide the form after a short delay or on a button click
-      setTimeout(() => setSuccess(false), 3000);
+
+      setTimeout(() => setSuccess(false), 3000); // Hide success message after 3 seconds
 
     } catch (err) {
-      console.error("Failed to add product:", err);
+      console.error(`Failed to ${isEditing ? 'update' : 'add'} product:`, err);
       setError(err);
     } finally {
       setSubmitting(false);
@@ -75,10 +97,10 @@ function ProductForm({ onProductAdded, onCancel }) {
 
   return (
     <div className="card shadow-lg p-4 mb-4 rounded-3">
-      <h4 className="card-title text-primary mb-4">Add New Product</h4>
+      <h4 className="card-title text-primary mb-4">{isEditing ? 'Edit Product' : 'Add New Product'}</h4>
       {success && (
         <div className="alert alert-success alert-dismissible fade show" role="alert">
-          Product added successfully!
+          Product {isEditing ? 'updated' : 'added'} successfully!
           <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
       )}
@@ -108,7 +130,7 @@ function ProductForm({ onProductAdded, onCancel }) {
             className="form-control"
             id="description"
             name="description"
-            value={product.description}
+            value={product.description || ''} // Handle null description
             onChange={handleChange}
             rows="3"
             disabled={submitting}
@@ -151,10 +173,10 @@ function ProductForm({ onProductAdded, onCancel }) {
             {submitting ? (
               <>
                 <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span className="ms-2">Adding...</span>
+                <span className="ms-2">{isEditing ? 'Updating...' : 'Adding...'}</span>
               </>
             ) : (
-              'Add Product'
+              isEditing ? 'Update Product' : 'Add Product'
             )}
           </button>
         </div>

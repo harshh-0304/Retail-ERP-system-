@@ -1,40 +1,61 @@
 // File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\components\ProductList.jsx
 import React, { useEffect, useState } from 'react';
 
-function ProductList() {
+function ProductList({ onEditProduct, onProductDeleted, refreshTrigger }) { // Added props for edit/delete
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // Define the URL of your ASP.NET Core backend API
-    // IMPORTANT: Ensure this matches the HTTP port your backend is actually listening on.
-    // Check your backend terminal output for "Now listening on: http://localhost:XXXX"
-    const API_URL = 'http://localhost:5219/api/products';
+  const API_URL = 'http://localhost:5219/api/products'; // Confirm your backend's HTTP port
 
+  useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const response = await fetch(API_URL);
 
         if (!response.ok) {
-          // If response is not OK (e.g., 404, 500), throw an error
-          const errorText = await response.text(); // Try to get more details from the response body
+          const errorText = await response.text();
           throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Response: ${errorText}`);
         }
 
         const data = await response.json();
         setProducts(data);
       } catch (err) {
-        // Catch any network errors or errors from the response.ok check
         console.error("Failed to fetch products:", err);
         setError(err);
       } finally {
-        setLoading(false); // Always stop loading, regardless of success or failure
+        setLoading(false);
       }
     };
 
     fetchProducts();
-  }, []); // Empty dependency array ensures this effect runs only once on component mount
+  }, [refreshTrigger]); // refreshTrigger will cause re-fetch when products are added/updated/deleted
+
+  const handleDeleteClick = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      try {
+        const response = await fetch(`${API_URL}/${productId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
+        }
+
+        // Notify parent component that a product was deleted, triggering a refresh
+        if (onProductDeleted) {
+          onProductDeleted();
+        }
+        alert('Product deleted successfully!');
+      } catch (err) {
+        console.error("Failed to delete product:", err);
+        alert(`Error deleting product: ${err.message}`);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -74,23 +95,45 @@ function ProductList() {
         <div className="alert alert-info text-center p-4 rounded-3 shadow-sm" role="alert">
           <h4 className="alert-heading">No Products Found!</h4>
           <p className="mb-0">
-            The backend returned no product data. Please add some products using Postman or through Entity Framework Core seeding.
+            The backend returned no product data. Please add some products using the form above or through Entity Framework Core seeding!
           </p>
         </div>
       ) : (
         <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
           {products.map(product => (
             <div key={product.id} className="col">
-              <div className="card h-100 shadow-sm rounded-3">
-                <div className="card-body">
-                  <h5 className="card-title text-primary">{product.name}</h5>
-                  <p className="card-text text-muted">{product.description}</p>
-                  <p className="card-text">
-                    <span className="fw-bold fs-5 text-success">${product.price.toFixed(2)}</span>
-                  </p>
-                  <p className="card-text">
-                    <small className="text-muted">Stock: {product.stockQuantity}</small>
-                  </p>
+              <div className="card h-100 shadow-lg rounded-3 border-0">
+                <img
+                  src={`https://placehold.co/400x200/e0e0e0/333333?text=Product+Image`}
+                  className="card-img-top rounded-top"
+                  alt={product.name}
+                  onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found"; }}
+                />
+                <div className="card-body d-flex flex-column">
+                  <h5 className="card-title text-primary fw-bold mb-2">{product.name}</h5>
+                  <p className="card-text text-muted flex-grow-1">{product.description || 'No description available.'}</p>
+                  <div className="d-flex justify-content-between align-items-center mt-3">
+                    <p className="card-text mb-0">
+                      <span className="fw-bold fs-5 text-success">${product.price.toFixed(2)}</span>
+                    </p>
+                    <p className="card-text mb-0">
+                      <small className="text-muted">Stock: {product.stockQuantity}</small>
+                    </p>
+                  </div>
+                  <div className="d-flex justify-content-end mt-3 gap-2">
+                    <button
+                      className="btn btn-sm btn-warning"
+                      onClick={() => onEditProduct(product)} // Call parent's edit handler
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleDeleteClick(product.id)} // Call local delete handler
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
