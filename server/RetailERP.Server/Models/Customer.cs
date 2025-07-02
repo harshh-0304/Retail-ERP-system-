@@ -1,28 +1,32 @@
-    // File: C:\Users\bakas\Desktop\Retail ERP\server\RetailERP.Server\Models\Customer.cs
-    using System.Collections.Generic;
-    using System.ComponentModel.DataAnnotations;
-    using System.Text.Json.Serialization; // Add this using directive
+// File: C:\Users\bakas\Desktop\Retail ERP\server\RetailERP.Server\Models\Customer.cs
 
-    namespace RetailERP.Server.Models
+using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic; // For ICollection
+using System.Text.Json.Serialization; // IMPORTANT: Add this using directive
+
+namespace RetailERP.Server.Models
+{
+    public class Customer
     {
-        public class Customer
-        {
-            public int Id { get; set; }
+        [Key]
+        public int Id { get; set; }
 
-            [Required] // Added 'required' modifier
-            [MaxLength(100)]
-            public string Name { get; set; } = default!; // Initialized to avoid warning if 'required' is not fully supported by context
+        [Required]
+        [MaxLength(255)]
+        public string Name { get; set; } = default!;
 
-            [Required] // Added 'required' modifier
-            [MaxLength(20)]
-            public string Contact { get; set; } = default!; // Initialized to avoid warning
+        [Required]
+        [MaxLength(50)]
+        public string Contact { get; set; } = default!; // E.g., Phone Number
 
-            [MaxLength(100)]
-            public string? Email { get; set; } // Made nullable, as it might be optional
+        [MaxLength(255)]
+        [EmailAddress] // Optional: Basic email format validation
+        public string? Email { get; set; } // Email might be optional, hence nullable
 
-            // Navigation property for Bills
-            // Add [JsonIgnore] to break the serialization cycle
-            [JsonIgnore]
-            public ICollection<Bill> Bills { get; set; } = new List<Bill>(); // Initialized collection
-        }
+        // Navigation property for Bills (a customer can have many bills)
+        // ADD THIS: [JsonIgnore] to break the circular reference when serializing Customer
+        // This prevents the serializer from going Bill -> Customer -> Bills -> Bill -> ...
+        [JsonIgnore]
+        public ICollection<Bill> Bills { get; set; } = new List<Bill>();
     }
+}

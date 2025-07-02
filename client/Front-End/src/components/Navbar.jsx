@@ -3,7 +3,8 @@ import React from 'react';
 
 function Navbar({ onNavigate }) {
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    // Changed navbar-dark and bg-primary to navbar-dark and bg-dark for black background and white text
+    <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
       <div className="container-fluid">
         <a className="navbar-brand fs-4 fw-bold" href="#" onClick={() => onNavigate('home')}>
           Retail ERP

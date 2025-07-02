@@ -1,5 +1,5 @@
 // File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\App.jsx
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
 import CustomersPage from './pages/CustomersPage';
@@ -36,12 +36,14 @@ function App() {
       {/* Navbar placed here, outside the main content, but within the main app div */}
       <Navbar onNavigate={handlePageChange} />
 
-      <header className="text-center mb-5 mt-3"> {/* Added mt-3 for spacing below navbar */}
+      {/* Removed the main header content as requested */}
+      {/* <header className="text-center mb-5 mt-3">
         <h1 className="display-4 fw-bold text-dark">Retail ERP Frontend</h1>
         <p className="lead text-muted mt-2">Powered by React & ASP.NET Core</p>
-      </header>
+      </header> */}
 
-      <main className="container my-auto flex-grow-1"> {/* flex-grow-1 ensures content pushes footer down */}
+      {/* Removed 'container' class from main to allow full width content */}
+      <main className="my-auto flex-grow-1"> {/* flex-grow-1 ensures content pushes footer down */}
         {renderPage()} {/* Render the selected page based on state */}
       </main>
 

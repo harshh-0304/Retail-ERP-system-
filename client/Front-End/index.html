@@ -10,8 +10,14 @@
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
+      html, body { /* Ensure both html and body take full height */
+        height: 100%;
+        margin: 0;
+        overflow-x: hidden; /* Prevent horizontal scroll */
+      }
       body {
         font-family: 'Inter', sans-serif;
+        background-color: #f8f9fa; /* Light background color for the page */
       }
       /* Custom animations for the home page */
       @keyframes fade-in {
@@ -30,16 +36,37 @@
         animation-delay: 0.2s; /* Delay for a staggered effect */
         animation-fill-mode: both;
       }
-      /* Ensure min-vh-75 works correctly for HomePage if used */
-      .min-vh-75 {
-        min-height: 75vh;
+      /* Staggered animations for cards */
+      .animate-fade-in-delay-1 { animation: fade-in 0.8s ease-out forwards; animation-delay: 0.4s; animation-fill-mode: both; }
+      .animate-fade-in-delay-2 { animation: fade-in 0.8s ease-out forwards; animation-delay: 0.6s; animation-fill-mode: both; }
+      .animate-fade-in-delay-3 { animation: fade-in 0.8s ease-out forwards; animation-delay: 0.8s; animation-fill-mode: both; }
+
+      /* Hover effect for cards */
+      .hover-scale {
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      }
+      .hover-scale:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important; /* Stronger shadow on hover */
+      }
+
+      /* Ensure React root content takes full height and is above any future background elements */
+      #root {
+        position: relative;
+        z-index: 0;
+        min-height: 100vh; /* Ensure root takes full height to push footer down */
+        display: flex;
+        flex-direction: column;
       }
     </style>
   </head>
   <body>
+    <!-- This is the entry point for your React application -->
     <div id="root"></div>
+
     <!-- Bootstrap JavaScript CDN (bundle includes Popper) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
     <!-- This is the entry point for your React application -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
