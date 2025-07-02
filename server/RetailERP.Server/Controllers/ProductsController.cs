@@ -20,14 +20,38 @@ namespace RetailERP.Server.Controllers
         }
 
         // GET: api/Products
+        // Now accepts optional query parameters for searching and filtering
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<Product>>> GetProducts(
+            [FromQuery] string? search = null, // Optional search term for name/description
+            [FromQuery] int? minStock = null)  // Optional minimum stock quantity
         {
             if (_context.Products == null)
             {
                 return NotFound();
             }
-            return await _context.Products.ToListAsync();
+
+            IQueryable<Product> query = _context.Products;
+
+            // Apply search filter if a search term is provided
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                // Ensure case-insensitive search by converting both sides to lower case
+                // This filters products where Name OR Description contains the search term
+                query = query.Where(p =>
+                    p.Name.ToLower().Contains(search.ToLower()) ||
+                    (p.Description != null && p.Description.ToLower().Contains(search.ToLower())));
+            }
+
+            // Apply minimum stock filter if minStock is provided
+            if (minStock.HasValue)
+            {
+                // Filters products where StockQuantity is greater than or equal to the minStock value
+                query = query.Where(p => p.StockQuantity >= minStock.Value);
+            }
+
+            // Execute the query and return the filtered list of products
+            return await query.ToListAsync();
         }
 
         // GET: api/Products/5

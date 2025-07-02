@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RetailERP.Server.Data;
 using System.Text.Json.Serialization; // Add this using directive
+using Microsoft.Extensions.Logging; // Add this using directive
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,13 +12,8 @@ var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options => // Add JSON options configuration
     {
-        // This helps to prevent circular reference errors and ensures navigation properties are serialized.
-        // Option 1: Preserve object references (might add $id, $ref properties to JSON)
-        // options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
-
-        // Option 2: Ignore cycles (recommended for most API scenarios to avoid circular reference issues)
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull; // Optional: Ignore null properties
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
 
 // Configure CORS
@@ -26,20 +22,22 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
                       policy =>
                       {
-                          policy.WithOrigins("http://localhost:5173", // Your Vite development server URL
-                                              "https://localhost:5173") // Include HTTPS if your Vite dev server uses it
+                          policy.WithOrigins("http://localhost:5173",
+                                              "https://localhost:5173")
                                  .AllowAnyHeader()
                                  .AllowAnyMethod();
                       });
 });
-
 
 // Get the connection string from appsettings.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // Configure the DbContext to use SQL Server with your connection string
 builder.Services.AddDbContext<RetailDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString)
+           .LogTo(Console.WriteLine, LogLevel.Information) // ADDED: Log EF Core queries to console
+           .EnableSensitiveDataLogging() // ADDED: Include parameter values in logs (for debugging only)
+           .EnableDetailedErrors()); // ADDED: Enable detailed EF Core error messages
 
 var app = builder.Build();
 
