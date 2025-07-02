@@ -1,20 +1,25 @@
 // File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\pages\CustomersPage.jsx
 import React, { useEffect, useState } from 'react';
+import CustomerForm from '../components/CustomerForm'; // Import the CustomerForm component
 
 function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCustomerForm, setShowCustomerForm] = useState(false); // State to toggle form visibility
+  const [refreshCustomers, setRefreshCustomers] = useState(0); // State to trigger customer list refresh
 
   useEffect(() => {
     const API_URL = 'http://localhost:5219/api/customers'; // Confirm your backend's HTTP port
 
     const fetchCustomers = async () => {
+      setLoading(true); // Set loading to true when fetching
+      setError(null);   // Clear any previous errors
       try {
         const response = await fetch(API_URL);
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Response: ${errorText}`);
+          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
         }
         const data = await response.json();
         setCustomers(data);
@@ -27,7 +32,13 @@ function CustomersPage() {
     };
 
     fetchCustomers();
-  }, []);
+    // Add refreshCustomers to dependency array so it refetches when a new customer is added
+  }, [refreshCustomers]);
+
+  const handleCustomerAdded = () => {
+    setShowCustomerForm(false); // Hide the form
+    setRefreshCustomers(prev => prev + 1); // Trigger a refresh of the customer list
+  };
 
   if (loading) {
     return (
@@ -60,11 +71,28 @@ function CustomersPage() {
   return (
     <div className="container py-4">
       <h3 className="text-center mb-4">Our Customers</h3>
+
+      <div className="d-flex justify-content-end mb-4">
+        <button
+          className="btn btn-info text-white" // Bootstrap info color for button
+          onClick={() => setShowCustomerForm(!showCustomerForm)}
+        >
+          {showCustomerForm ? 'Hide Form' : 'Add New Customer'}
+        </button>
+      </div>
+
+      {showCustomerForm && (
+        <CustomerForm
+          onCustomerAdded={handleCustomerAdded}
+          onCancel={() => setShowCustomerForm(false)}
+        />
+      )}
+
       {customers.length === 0 ? (
         <div className="alert alert-info text-center p-4 rounded-3 shadow-sm" role="alert">
           <h4 className="alert-heading">No Customers Found!</h4>
           <p className="mb-0">
-            The backend returned no customer data. Please add some customers using Postman or through Entity Framework Core seeding.
+            The backend returned no customer data. Please add some customers using the form above or through Entity Framework Core seeding.
           </p>
         </div>
       ) : (
@@ -76,6 +104,7 @@ function CustomersPage() {
                 <th scope="col">Name</th>
                 <th scope="col">Contact</th>
                 <th scope="col">Email</th>
+                {/* Add a column for actions (Edit/Delete) later */}
               </tr>
             </thead>
             <tbody>
