@@ -145,11 +145,7 @@ function CustomersPage() {
           <table className="table table-hover table-striped mb-0">
             <thead className="table-primary">
               <tr>
-                <th scope="col">#</th>
-                <th scope="col">Name</th>
-                <th scope="col">Contact</th>
-                <th scope="col">Email</th>
-                <th scope="col">Actions</th> {/* New column for buttons */}
+                <th scope="col">#</th><th scope="col">Name</th><th scope="col">Contact</th><th scope="col">Email</th><th scope="col">Actions</th> {/* Fixed whitespace */}
               </tr>
             </thead>
             <tbody>
