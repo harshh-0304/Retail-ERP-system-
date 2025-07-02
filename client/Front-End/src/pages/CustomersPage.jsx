@@ -7,11 +7,12 @@ function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false); // State to toggle form visibility
+  const [editingCustomer, setEditingCustomer] = useState(null); // State to hold customer being edited
   const [refreshCustomers, setRefreshCustomers] = useState(0); // State to trigger customer list refresh
 
-  useEffect(() => {
-    const API_URL = 'http://localhost:5219/api/customers'; // Confirm your backend's HTTP port
+  const API_URL = 'http://localhost:5219/api/customers'; // Confirm your backend's HTTP port
 
+  useEffect(() => {
     const fetchCustomers = async () => {
       setLoading(true); // Set loading to true when fetching
       setError(null);   // Clear any previous errors
@@ -32,12 +33,51 @@ function CustomersPage() {
     };
 
     fetchCustomers();
-    // Add refreshCustomers to dependency array so it refetches when a new customer is added
+    // Add refreshCustomers to dependency array so it refetches when a new customer is added or updated/deleted
   }, [refreshCustomers]);
 
   const handleCustomerAdded = () => {
     setShowCustomerForm(false); // Hide the form
+    setEditingCustomer(null); // Clear editing state
     setRefreshCustomers(prev => prev + 1); // Trigger a refresh of the customer list
+  };
+
+  const handleCustomerUpdated = () => {
+    setShowCustomerForm(false);
+    setEditingCustomer(null); // Clear editing state
+    setRefreshCustomers(prev => prev + 1); // Trigger a refresh of the customer list
+  };
+
+  const handleEditClick = (customer) => {
+    setEditingCustomer(customer); // Set the customer to be edited
+    setShowCustomerForm(true);    // Show the form
+  };
+
+  const handleDeleteClick = async (customerId) => {
+    if (window.confirm('Are you sure you want to delete this customer?')) { // Basic confirmation
+      try {
+        const response = await fetch(`${API_URL}/${customerId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
+        }
+
+        // If deletion is successful, refresh the list
+        setRefreshCustomers(prev => prev + 1);
+        alert('Customer deleted successfully!'); // User-friendly alert
+      } catch (err) {
+        console.error("Failed to delete customer:", err);
+        alert(`Error deleting customer: ${err.message}`); // User-friendly error alert
+      }
+    }
+  };
+
+  const handleCancelForm = () => {
+    setShowCustomerForm(false);
+    setEditingCustomer(null); // Clear editing state on cancel
   };
 
   if (loading) {
@@ -75,16 +115,21 @@ function CustomersPage() {
       <div className="d-flex justify-content-end mb-4">
         <button
           className="btn btn-info text-white" // Bootstrap info color for button
-          onClick={() => setShowCustomerForm(!showCustomerForm)}
+          onClick={() => {
+            setEditingCustomer(null); // Ensure we are in "add" mode when clicking "Add New Customer"
+            setShowCustomerForm(!showCustomerForm);
+          }}
         >
-          {showCustomerForm ? 'Hide Form' : 'Add New Customer'}
+          {showCustomerForm && !editingCustomer ? 'Hide Form' : (editingCustomer ? 'Cancel Edit' : 'Add New Customer')}
         </button>
       </div>
 
       {showCustomerForm && (
         <CustomerForm
+          initialData={editingCustomer} // Pass the customer data if editing
           onCustomerAdded={handleCustomerAdded}
-          onCancel={() => setShowCustomerForm(false)}
+          onCustomerUpdated={handleCustomerUpdated}
+          onCancel={handleCancelForm}
         />
       )}
 
@@ -104,7 +149,7 @@ function CustomersPage() {
                 <th scope="col">Name</th>
                 <th scope="col">Contact</th>
                 <th scope="col">Email</th>
-                {/* Add a column for actions (Edit/Delete) later */}
+                <th scope="col">Actions</th> {/* New column for buttons */}
               </tr>
             </thead>
             <tbody>
@@ -113,7 +158,21 @@ function CustomersPage() {
                   <th scope="row">{customer.id}</th>
                   <td>{customer.name}</td>
                   <td>{customer.contact}</td>
-                  <td>{customer.email || '-'}</td> {/* Display '-' if email is null */}
+                  <td>{customer.email || '-'}</td>
+                  <td>
+                    <button
+                      className="btn btn-sm btn-warning me-2"
+                      onClick={() => handleEditClick(customer)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleDeleteClick(customer.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
