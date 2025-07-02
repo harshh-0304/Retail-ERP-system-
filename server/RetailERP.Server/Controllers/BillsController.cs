@@ -2,8 +2,9 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RetailERP.Server.Data; // Your DbContext
-using RetailERP.Server.Models; // Your Bill model
+using RetailERP.Server.Data;
+using RetailERP.Server.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation; // Added for [ValidateNever]
 
 namespace RetailERP.Server.Controllers
 {
@@ -19,18 +20,50 @@ namespace RetailERP.Server.Controllers
         }
 
         // GET: api/Bills
-        // Includes Customer and BillItems for comprehensive bill data
+        // Explicitly project into an anonymous type to ensure Customer and Product data are serialized
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Bill>>> GetBills()
+        public async Task<ActionResult<IEnumerable<object>>> GetBills() // Return type changed to IEnumerable<object>
         {
             if (_context.Bills == null)
             {
                 return NotFound();
             }
+
             return await _context.Bills
-                                 .Include(b => b.Customer) // Eager load the Customer
-                                 .Include(b => b.Items)    // Eager load the BillItems
-                                     .ThenInclude(bi => bi.Product) // Further include Product for each BillItem
+                                 .Include(b => b.Customer)
+                                 .Include(b => b.Items)
+                                     .ThenInclude(bi => bi.Product)
+                                 .Select(b => new // Project into an anonymous object
+                                 {
+                                     b.Id,
+                                     b.BillDate,
+                                     b.CustomerId,
+                                     Customer = b.Customer != null ? new // Safely access Customer properties
+                                     {
+                                         b.Customer.Id,
+                                         b.Customer.Name,
+                                         b.Customer.Contact,
+                                         b.Customer.Email
+                                     } : null, // Provide null if customer is null
+                                     b.TotalAmount,
+                                     Items = b.Items.Select(bi => new // Explicitly select BillItem and Product properties
+                                     {
+                                         bi.Id,
+                                         bi.BillId,
+                                         bi.ProductId,
+                                         Product = bi.Product != null ? new // Safely access Product properties
+                                         {
+                                             bi.Product.Id,
+                                             bi.Product.Name,
+                                             bi.Product.Description,
+                                             bi.Product.Price,
+                                             bi.Product.StockQuantity
+                                         } : null, // Provide null if product is null
+                                         bi.Quantity,
+                                         bi.UnitPrice,
+                                         bi.ItemTotal
+                                     }).ToList()
+                                 })
                                  .ToListAsync();
         }
 
@@ -42,6 +75,7 @@ namespace RetailERP.Server.Controllers
             {
                 return NotFound();
             }
+            // Also include related data for a single bill fetch
             var bill = await _context.Bills
                                      .Include(b => b.Customer)
                                      .Include(b => b.Items)
@@ -57,8 +91,6 @@ namespace RetailERP.Server.Controllers
         }
 
         // POST: api/Bills
-        // Note: When posting a bill, ensure CustomerId is provided.
-        // BillItems can be added in a separate request or as part of a more complex DTO.
         [HttpPost]
         public async Task<ActionResult<Bill>> PostBill(Bill bill)
         {
@@ -67,51 +99,59 @@ namespace RetailERP.Server.Controllers
                 return Problem("Entity set 'RetailDbContext.Bills' is null.");
             }
 
-            // Ensure related entities are tracked correctly if they are new or existing
-            if (bill.Customer != null && bill.Customer.Id == 0)
+            // Ensure BillDate is set if not provided by client (or rely on model default)
+            if (bill.BillDate == default(DateTime))
             {
-                _context.Customers.Add(bill.Customer); // Add new customer if provided
-            }
-            else if (bill.Customer != null && bill.Customer.Id > 0)
-            {
-                _context.Customers.Attach(bill.Customer); // Attach existing customer
-                _context.Entry(bill.Customer).State = EntityState.Unchanged; // Prevent updating customer if it's just a reference
+                bill.BillDate = DateTime.UtcNow;
             }
 
-            // Handle BillItems if they are part of the initial POST
-            // FIX: Added null check for bill.Items
-            if (bill.Items != null && bill.Items.Any())
+            // Validate CustomerId exists
+            var customerExists = await _context.Customers.AnyAsync(c => c.Id == bill.CustomerId);
+            if (!customerExists)
             {
-                foreach (var item in bill.Items)
-                {
-                    // Attach existing products or add new ones if necessary
-                    if (item.Product != null && item.Product.Id > 0)
-                    {
-                        _context.Products.Attach(item.Product);
-                        _context.Entry(item.Product).State = EntityState.Unchanged;
-                    }
-                    _context.BillItems.Add(item); // Add the bill item
-                }
+                return BadRequest($"Customer with ID {bill.CustomerId} does not exist.");
             }
 
+            // Explicitly skip validation for the Customer navigation property
+            ModelState.ClearValidationState(nameof(bill.Customer));
 
+            // Add the bill to the context. Its associated BillItems will also be tracked.
             _context.Bills.Add(bill);
+            
+            // Now, handle BillItems and update Product StockQuantity before saving
+            foreach (var item in bill.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product == null)
+                {
+                    return BadRequest($"Product with ID {item.ProductId} not found.");
+                }
+
+                if (product.StockQuantity < item.Quantity)
+                {
+                    return BadRequest($"Insufficient stock for product '{product.Name}'. Available: {product.StockQuantity}, Requested: {item.Quantity}");
+                }
+
+                product.StockQuantity -= item.Quantity; // Decrement stock
+                item.UnitPrice = product.Price; // Use current product price as UnitPrice for the bill item
+                item.ItemTotal = item.Quantity * item.UnitPrice;
+                
+                // No need to explicitly add item to _context.BillItems.Add(item); here
+                // if it's already part of bill.Items and bill is added to context.
+                // EF Core will handle cascading save for related entities in the graph.
+            }
+
+            // Save all changes (Bill, BillItems, Product stock updates) in one transaction
             await _context.SaveChangesAsync();
 
-            // Reload navigation properties to return a complete object
-            await _context.Entry(bill)
-                          .Reference(b => b.Customer).LoadAsync();
-            await _context.Entry(bill)
-                          .Collection(b => b.Items).LoadAsync();
-            // FIX: Added null check for bill.Items before iterating after loading
-            if (bill.Items != null)
+            // After saving, reload the customer and items (with products) for the response
+            // This ensures the returned bill object is complete and ready for the frontend.
+            await _context.Entry(bill).Reference(b => b.Customer).LoadAsync();
+            await _context.Entry(bill).Collection(b => b.Items).LoadAsync();
+            foreach (var item in bill.Items)
             {
-                foreach (var item in bill.Items)
-                {
-                    await _context.Entry(item).Reference(bi => bi.Product).LoadAsync();
-                }
+                await _context.Entry(item).Reference(bi => bi.Product).LoadAsync();
             }
-
 
             return CreatedAtAction("GetBill", new { id = bill.Id }, bill);
         }
@@ -125,20 +165,7 @@ namespace RetailERP.Server.Controllers
                 return BadRequest();
             }
 
-            // Detach any existing tracked entity with the same ID to avoid conflicts
-            var existingBill = await _context.Bills.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id);
-            if (existingBill == null)
-            {
-                return NotFound();
-            }
-
             _context.Entry(bill).State = EntityState.Modified;
-
-            // Handle related entities: Customer and BillItems
-            // For simplicity in a PUT, you might only update scalar properties of Bill
-            // or use a DTO. Handling nested updates for collections like BillItems
-            // requires more complex logic (e.g., comparing existing items, adding new, removing old).
-            // This example assumes BillItems are managed separately or via a DTO for updates.
 
             try
             {
@@ -167,10 +194,23 @@ namespace RetailERP.Server.Controllers
             {
                 return NotFound();
             }
-            var bill = await _context.Bills.FindAsync(id);
+            var bill = await _context.Bills
+                                     .Include(b => b.Items) // Include items to potentially revert stock
+                                     .FirstOrDefaultAsync(b => b.Id == id);
             if (bill == null)
             {
                 return NotFound();
+            }
+
+            // OPTIONAL: Revert stock for products in the deleted bill
+            // This depends on your business logic. If you delete a bill, do you put stock back?
+            foreach (var item in bill.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity += item.Quantity; // Add stock back
+                }
             }
 
             _context.Bills.Remove(bill);

@@ -15,18 +15,19 @@ namespace RetailERP.Server.Models
         [Required]
         public int BillId { get; set; }
 
-        // Add [JsonIgnore] to break the circular reference when serializing BillItem
-        // This prevents the serializer from going Bill -> Items -> BillItem -> Bill -> ...
+        // Add [JsonIgnore] to break the circular reference and prevent validation issues
         [JsonIgnore]
         [ForeignKey("BillId")]
-        public Bill Bill { get; set; } = default!; // Navigation property
+        public Bill? Bill { get; set; } // Made nullable and JsonIgnored
 
         // Foreign Key to Product
         [Required]
         public int ProductId { get; set; }
 
+        // Add [JsonIgnore] to prevent validation issues for incoming POST requests
+        [JsonIgnore]
         [ForeignKey("ProductId")]
-        public Product Product { get; set; } = default!; // Navigation property
+        public Product? Product { get; set; } // Made nullable and JsonIgnored
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]

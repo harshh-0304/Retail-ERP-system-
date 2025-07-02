@@ -3,6 +3,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema; // For [Column] attribute
 using System.Collections.Generic;
+using System.Text.Json.Serialization; // IMPORTANT: Add this for [JsonIgnore]
 
 namespace RetailERP.Server.Models
 {
@@ -15,11 +16,12 @@ namespace RetailERP.Server.Models
         public DateTime BillDate { get; set; } = DateTime.UtcNow; // Default to current UTC time
 
         // Foreign Key to Customer
-        [Required]
+        [Required] // This ensures CustomerId must be provided
         public int CustomerId { get; set; }
 
         [ForeignKey("CustomerId")] // Explicitly define foreign key relationship
-        public Customer Customer { get; set; } = default!; // Navigation property, initialized with default!
+        [JsonIgnore] // Prevents JSON serializer/deserializer from expecting/validating the Customer object
+        public Customer? Customer { get; set; } // MADE NULLABLE: This tells validation that the object itself is optional for incoming requests
 
         [Required]
         [Column(TypeName = "decimal(18, 2)")] // Specifies decimal precision for database
