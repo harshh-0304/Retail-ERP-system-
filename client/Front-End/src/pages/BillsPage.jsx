@@ -1,6 +1,7 @@
 // File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\pages\BillsPage.jsx
 import React, { useEffect, useState } from 'react';
 import BillForm from '../components/BillForm'; // Import the BillForm component
+import BillDetailModal from '../components/BillDetailModal'; // Import the new BillDetailModal component
 
 function BillsPage() {
   const [bills, setBills] = useState([]);
@@ -8,35 +9,34 @@ function BillsPage() {
   const [error, setError] = useState(null);
   const [showBillForm, setShowBillForm] = useState(false); // State to toggle form visibility
   const [refreshBills, setRefreshBills] = useState(0); // State to trigger bill list refresh
+  const [showDetailModal, setShowDetailModal] = useState(false); // State for detail modal visibility
+  const [selectedBill, setSelectedBill] = useState(null); // State to hold the bill for details
+
+  const API_URL = 'http://localhost:5219/api/bills'; // Confirm your backend's HTTP port
+
+  const fetchBills = async () => {
+    setLoading(true); // Set loading to true when fetching
+    setError(null);   // Clear any previous errors
+    try {
+      const response = await fetch(API_URL);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Response: ${errorText}`);
+      }
+      const data = await response.json();
+      setBills(data);
+    } catch (err) {
+      console.error("Failed to fetch bills:", err);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const API_URL = 'http://localhost:5219/api/bills'; // Confirm your backend's HTTP port
-
-    const fetchBills = async () => {
-      setLoading(true); // Set loading to true when fetching
-      setError(null);   // Clear any previous errors
-      try {
-        // Include customer and bill items for display
-        const response = await fetch(API_URL); // Removed ?_expand and ?_embed as ASP.NET Core handles Includes
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Response: ${errorText}`);
-        }
-        const data = await response.json();
-        console.log("Bills data received by frontend:", data); // ADDED THIS LOG
-        setBills(data);
-      } catch (err) {
-        console.error("Failed to fetch bills:", err);
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchBills();
-    // Add refreshBills to dependency array so it refetches when a new bill is added
-  }, [refreshBills]);
+  }, [refreshBills]); // Re-fetch bills when refreshBills state changes
 
   const handleBillAdded = () => {
     setShowBillForm(false); // Hide the form
@@ -45,6 +45,33 @@ function BillsPage() {
 
   const handleCancelForm = () => {
     setShowBillForm(false);
+  };
+
+  const handleViewDetails = (bill) => {
+    setSelectedBill(bill);
+    setShowDetailModal(true);
+  };
+
+  const handleDeleteBill = async (billId) => {
+    if (window.confirm(`Are you sure you want to delete Bill ID: ${billId}?`)) {
+      try {
+        const response = await fetch(`${API_URL}/${billId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
+        }
+
+        // If deletion is successful, refresh the list of bills
+        setRefreshBills(prev => prev + 1);
+        alert('Bill deleted successfully!'); // Use custom modal later
+      } catch (err) {
+        console.error("Failed to delete bill:", err);
+        alert(`Error deleting bill: ${err.message}`); // Use custom modal later
+      }
+    }
   };
 
   if (loading) {
@@ -112,7 +139,7 @@ function BillsPage() {
                 <th scope="col">Customer Name</th>
                 <th scope="col">Total Amount</th>
                 <th scope="col">Items</th>
-                {/* Add a column for actions (View Details, Delete) later */}
+                <th scope="col">Actions</th> {/* New Actions column */}
               </tr>
             </thead>
             <tbody>
@@ -120,14 +147,12 @@ function BillsPage() {
                 <tr key={bill.id}>
                   <th scope="row">{bill.id}</th>
                   <td>{new Date(bill.billDate).toLocaleDateString()}</td>
-                  {/* Ensure bill.customer exists before accessing its name */}
                   <td>{bill.customer ? bill.customer.name : 'N/A'}</td>
                   <td>${bill.totalAmount ? bill.totalAmount.toFixed(2) : '0.00'}</td>
                   <td>
                     {bill.items && bill.items.length > 0 ? (
                       <ul className="list-unstyled mb-0">
                         {bill.items.map(item => (
-                          // Use a unique key for list items, e.g., item.id
                           <li key={item.id}>
                             {item.quantity}x {item.product ? item.product.name : 'Unknown Product'} (${item.unitPrice ? item.unitPrice.toFixed(2) : '0.00'} each)
                           </li>
@@ -137,11 +162,34 @@ function BillsPage() {
                       'No items'
                     )}
                   </td>
+                  <td>
+                    <button
+                      className="btn btn-info btn-sm me-2"
+                      onClick={() => handleViewDetails(bill)}
+                    >
+                      View
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleDeleteBill(bill.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Bill Detail Modal */}
+      {selectedBill && (
+        <BillDetailModal
+          bill={selectedBill}
+          show={showDetailModal}
+          onHide={() => setShowDetailModal(false)}
+        />
       )}
     </div>
   );
