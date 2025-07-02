@@ -125,7 +125,6 @@ function HomePage({ onNavigate }) {
                 </div>
               </div>
             </div>
-            {/* Removed KPI Card 4: Orders Processed */}
           </div>
         )}
       </div>

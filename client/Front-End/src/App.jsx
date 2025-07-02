@@ -3,12 +3,14 @@ import React, { useState } from 'react';
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
 import CustomersPage from './pages/CustomersPage';
-import BillsPage from './pages/BillsPage'; // Assuming you have a BillsPage
-import Navbar from './components/Navbar'; // Import the Navbar component
+import BillsPage from './pages/BillsPage';
+import DashboardPage from './pages/DashboardPage'; // Import the new DashboardPage
+import Navbar from './components/Navbar';
 
 function App() {
   // State to keep track of the current page
-  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'products', 'customers', 'bills'
+  // Added 'dashboard' to the possible page states
+  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'products', 'customers', 'bills', 'dashboard'
 
   // Function to change the current page
   const handlePageChange = (page) => {
@@ -19,13 +21,15 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <HomePage onNavigate={handlePageChange} />; // Pass navigation function to HomePage
+        return <HomePage onNavigate={handlePageChange} />;
       case 'products':
-        return <ProductsPage />; // ProductsPage no longer needs onBackToHome if Navbar handles it
+        return <ProductsPage />;
       case 'customers':
-        return <CustomersPage />; // CustomersPage no longer needs onBackToHome if Navbar handles it
+        return <CustomersPage />;
       case 'bills':
-        return <BillsPage />; // BillsPage no longer needs onBackToHome if Navbar handles it
+        return <BillsPage />;
+      case 'dashboard': // New case for DashboardPage
+        return <DashboardPage />;
       default:
         return <HomePage onNavigate={handlePageChange} />; // Fallback to home
     }
@@ -33,21 +37,13 @@ function App() {
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-light">
-      {/* Navbar placed here, outside the main content, but within the main app div */}
       <Navbar onNavigate={handlePageChange} />
 
-      {/* Removed the main header content as requested */}
-      {/* <header className="text-center mb-5 mt-3">
-        <h1 className="display-4 fw-bold text-dark">Retail ERP Frontend</h1>
-        <p className="lead text-muted mt-2">Powered by React & ASP.NET Core</p>
-      </header> */}
-
-      {/* Removed 'container' class from main to allow full width content */}
-      <main className="my-auto flex-grow-1"> {/* flex-grow-1 ensures content pushes footer down */}
-        {renderPage()} {/* Render the selected page based on state */}
+      <main className="my-auto flex-grow-1">
+        {renderPage()}
       </main>
 
-      <footer className="mt-auto py-3 bg-dark text-white text-center"> {/* mt-auto pushes footer to bottom */}
+      <footer className="mt-auto py-3 bg-dark text-white text-center">
         &copy; {new Date().getFullYear()} Retail ERP. All rights reserved.
       </footer>
     </div>
