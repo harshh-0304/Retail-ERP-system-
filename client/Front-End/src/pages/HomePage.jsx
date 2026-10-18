@@ -156,69 +156,78 @@ function HomePage({ onNavigate }) {
         )}
       </div>
 
-      {/* Feature Cards Section - Existing Navigation */}
-      <div className="container-fluid mb-5 animate-slide-up" style={{ maxWidth: '1200px' }}>
-        <h3 className="text-center text-white-75 mb-4 fw-bold">Core Modules</h3>
-        <div className="row g-4 justify-content-center">
-          {/* Products Card */}
-          <div className="col-12 col-md-4">
-            <div
-              className="card h-100 text-center shadow-lg border-0 animate-fade-in-delay-1 cursor-pointer hover-scale hover-glow"
-              onClick={() => onNavigate('products')}
-              style={{
-                cursor: 'pointer',
-                backgroundColor: '#FFFDE0', // Very light, warm yellow/cream background for card
-                color: '#1A237E', // Dark Indigo Blue text for card content
-                borderRadius: '15px' // More rounded corners for cards
-              }}
-            >
-              <div className="card-body p-4 d-flex flex-column justify-content-center align-items-center">
-                <span className="display-4 icon-hover-grow" style={{ color: '#FFD700' }}>📦</span> {/* Gold icon */}
-                <h5 className="card-title fw-bold">Manage Products</h5>
-                <p className="card-text">Add, view, edit, and delete your inventory items.</p>
+      {/* Core Modules Quick Launchpad */}
+      <div className="mb-5">
+        <h3 className="h4 fw-bold erp-heading mb-3">Enterprise Operations Modules</h3>
+        <div className="row g-3 g-lg-4">
+          {[
+            {
+              id: 'products',
+              title: 'Inventory & Catalog',
+              description: 'Manage SKU pricing, stock reorders, and search warehouse inventory.',
+              icon: 'bi-box-seam-fill',
+              color: '#4f46e5',
+              badge: 'Catalog',
+              action: 'View Inventory'
+            },
+            {
+              id: 'bills',
+              title: 'Point of Sale & Billing',
+              description: 'Process customer checkouts, print professional invoices, and track revenue.',
+              icon: 'bi-receipt-cutoff',
+              color: '#10b981',
+              badge: 'POS Active',
+              action: 'Open POS'
+            },
+            {
+              id: 'customers',
+              title: 'Customer Directory',
+              description: 'Maintain verified client profiles, purchase histories, and contact tiers.',
+              icon: 'bi-people-fill',
+              color: '#0ea5e9',
+              badge: 'CRM',
+              action: 'Browse Clients'
+            },
+            {
+              id: 'dashboard',
+              title: 'Analytics & Insights',
+              description: 'Visualize sales trends, daily revenue trajectories, and top selling products.',
+              icon: 'bi-graph-up-arrow',
+              color: '#8b5cf6',
+              badge: 'Telemetry',
+              action: 'View Insights'
+            }
+          ].map(mod => (
+            <div key={mod.id} className="col-12 col-md-6 col-xl-3">
+              <div
+                className="card erp-card-elevated erp-hover-lift h-100 p-4 border-0 cursor-pointer d-flex flex-column justify-content-between"
+                onClick={() => onNavigate(mod.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div>
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <div
+                      className="d-flex align-items-center justify-content-center rounded-3 text-white shadow-sm"
+                      style={{ width: 48, height: 48, backgroundColor: mod.color, fontSize: '1.35rem' }}
+                    >
+                      <i className={`bi ${mod.icon}`} />
+                    </div>
+                    <span className="badge bg-secondary-subtle text-secondary-emphasis rounded-pill erp-badge-text">
+                      {mod.badge}
+                    </span>
+                  </div>
+                  <h4 className="h5 fw-bold erp-heading mb-2">{mod.title}</h4>
+                  <p className="text-muted mb-4" style={{ fontSize: '0.875rem', lineHeight: 1.5 }}>
+                    {mod.description}
+                  </p>
+                </div>
+                <div className="pt-2 border-top d-flex align-items-center justify-content-between text-primary fw-semibold" style={{ borderColor: 'var(--border-light)', fontSize: '0.875rem' }}>
+                  <span>{mod.action}</span>
+                  <i className="bi bi-arrow-right" />
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Customers Card */}
-          <div className="col-12 col-md-4">
-            <div
-              className="card h-100 text-center shadow-lg border-0 animate-fade-in-delay-2 cursor-pointer hover-scale hover-glow"
-              onClick={() => onNavigate('customers')}
-              style={{
-                cursor: 'pointer',
-                backgroundColor: '#FFFDE0', // Very light, warm yellow/cream background for card
-                color: '#1A237E', // Dark Indigo Blue text for card content
-                borderRadius: '15px'
-              }}
-            >
-              <div className="card-body p-4 d-flex flex-column justify-content-center align-items-center">
-                <span className="display-4 icon-hover-grow" style={{ color: '#FFD700' }}>👥</span> {/* Gold icon */}
-                <h5 className="card-title fw-bold">Handle Customers</h5>
-                <p className="card-text">Keep track of your customer base and their details.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Bills Card */}
-          <div className="col-12 col-md-4">
-            <div
-              className="card h-100 text-center shadow-lg border-0 animate-fade-in-delay-3 cursor-pointer hover-scale hover-glow"
-              onClick={() => onNavigate('bills')}
-              style={{
-                cursor: 'pointer',
-                backgroundColor: '#FFFDE0', // Very light, warm yellow/cream background for card
-                color: '#1A237E', // Dark Indigo Blue text for card content
-                borderRadius: '15px'
-              }}
-            >
-              <div className="card-body p-4 d-flex flex-column justify-content-center align-items-center">
-                <span className="display-4 icon-hover-grow" style={{ color: '#FFD700' }}>🧾</span> {/* Gold icon */}
-                <h5 className="card-title fw-bold">View Sales & Bills</h5>
-                <p className="card-text">Monitor all transactions and billing records.</p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </div>
