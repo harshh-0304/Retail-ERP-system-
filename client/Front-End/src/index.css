@@ -273,3 +273,28 @@ h1, h2, h3, h4, h5, h6, .erp-heading {
   background-color: var(--bg-subtle);
   color: var(--text-main);
 }
+
+/* Print Stylesheet for Invoices & Receipts */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .erp-printable-area, .erp-printable-area * {
+    visibility: visible;
+  }
+  .erp-printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print, .btn, .modal-header .btn-close, .navbar, footer {
+    display: none !important;
+  }
+}
