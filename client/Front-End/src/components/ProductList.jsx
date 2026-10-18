@@ -5,6 +5,7 @@ import LoadingSkeleton from './common/LoadingSkeleton';
 import EmptyState from './common/EmptyState';
 import ConfirmDialog from './common/ConfirmDialog';
 import Pagination from './common/Pagination';
+import Modal from './common/Modal';
 import { formatCurrency } from '../utils/formatters';
 
 function ProductList({
@@ -20,6 +21,9 @@ function ProductList({
   const [error, setError] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [adjustingStockProduct, setAdjustingStockProduct] = useState(null);
+  const [stockDelta, setStockDelta] = useState(10);
+  const [savingStock, setSavingStock] = useState(false);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -122,7 +126,14 @@ function ProductList({
                     <span className="badge bg-secondary-subtle text-secondary-emphasis rounded-pill erp-badge-text">
                       {product.category || 'General'}
                     </span>
-                    {getStockBadge(product.stockQuantity)}
+                    <div
+                      className="cursor-pointer"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => { setAdjustingStockProduct(product); setStockDelta(10); }}
+                      title="Click to adjust inventory stock"
+                    >
+                      {getStockBadge(product.stockQuantity)}
+                    </div>
                   </div>
                   <h4 className="h5 fw-bold erp-heading mb-2">{product.name}</h4>
                   <p className="text-muted mb-3" style={{ fontSize: '0.875rem' }}>
@@ -211,8 +222,15 @@ function ProductList({
                     <td className="fw-bold erp-mono text-dark-emphasis">
                       {formatCurrency(product.price)}
                     </td>
-                    <td>
-                      {getStockBadge(product.stockQuantity)}
+                    <td
+                      onClick={() => { setAdjustingStockProduct(product); setStockDelta(10); }}
+                      style={{ cursor: 'pointer' }}
+                      title="Click to adjust stock"
+                    >
+                      <div className="d-inline-flex align-items-center gap-1.5">
+                        {getStockBadge(product.stockQuantity)}
+                        <i className="bi bi-pencil-fill text-muted opacity-50" style={{ fontSize: '0.65rem' }} />
+                      </div>
                     </td>
                     <td className="text-end pe-4">
                       <div className="d-inline-flex gap-2">
@@ -261,6 +279,92 @@ function ProductList({
         confirmLabel="Delete Product"
         loading={deleting}
       />
+
+      {/* Quick Stock Adjustment Modal */}
+      <Modal
+        show={Boolean(adjustingStockProduct)}
+        onClose={() => setAdjustingStockProduct(null)}
+        title="Quick Stock Reorder / Adjustment"
+        icon="bi-boxes"
+        size="sm"
+      >
+        {adjustingStockProduct && (
+          <div>
+            <p className="mb-2" style={{ fontSize: '0.9rem' }}>
+              Adjusting inventory for <strong className="text-primary">{adjustingStockProduct.name}</strong>
+            </p>
+            <div className="d-flex justify-content-between p-2 rounded mb-3" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+              <span className="text-muted" style={{ fontSize: '0.85rem' }}>Current Stock:</span>
+              <strong className="erp-mono">{adjustingStockProduct.stockQuantity} units</strong>
+            </div>
+
+            <label className="form-label fw-semibold" style={{ fontSize: '0.85rem' }}>Units to Add (+) or Deduct (-):</label>
+            <div className="input-group mb-3">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => setStockDelta(prev => prev - 5)}
+              >
+                -5
+              </button>
+              <input
+                type="number"
+                className="form-control text-center fw-bold"
+                value={stockDelta}
+                onChange={(e) => setStockDelta(Number(e.target.value) || 0)}
+              />
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => setStockDelta(prev => prev + 10)}
+              >
+                +10
+              </button>
+            </div>
+
+            <div className="d-flex justify-content-between p-2 rounded mb-4 border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-light)' }}>
+              <span className="text-muted" style={{ fontSize: '0.85rem' }}>New Projected Stock:</span>
+              <strong className="text-success erp-mono">
+                {Math.max(0, (adjustingStockProduct.stockQuantity || 0) + stockDelta)} units
+              </strong>
+            </div>
+
+            <div className="d-flex justify-content-end gap-2">
+              <button
+                type="button"
+                className="btn btn-light rounded-pill px-3"
+                onClick={() => setAdjustingStockProduct(null)}
+                disabled={savingStock}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary rounded-pill px-4 fw-semibold"
+                disabled={savingStock}
+                onClick={async () => {
+                  setSavingStock(true);
+                  try {
+                    const newQty = Math.max(0, (adjustingStockProduct.stockQuantity || 0) + stockDelta);
+                    await erpService.updateProduct(adjustingStockProduct.id, {
+                      ...adjustingStockProduct,
+                      stockQuantity: newQty
+                    });
+                    setProducts(prev => prev.map(p => p.id === adjustingStockProduct.id ? { ...p, stockQuantity: newQty } : p));
+                    setAdjustingStockProduct(null);
+                  } catch (err) {
+                    alert(`Error adjusting stock: ${err.message}`);
+                  } finally {
+                    setSavingStock(false);
+                  }
+                }}
+              >
+                {savingStock ? 'Saving...' : 'Confirm Stock'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
