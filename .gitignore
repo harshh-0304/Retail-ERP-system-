@@ -1,0 +1,25 @@
+# Node / Vite
+client/Front-End/node_modules/
+client/Front-End/dist/
+client/Front-End/dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# .NET / Build output
+**/bin/
+**/obj/
+dotnet-install.sh
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
