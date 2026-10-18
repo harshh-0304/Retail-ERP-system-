@@ -1,77 +1,103 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\components\Navbar.jsx
 import React from 'react';
 
-function Navbar({ onNavigate }) {
+function Navbar({ onNavigate, currentPage = 'home' }) {
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-      <div className="container-fluid">
-        <a className="navbar-brand fs-4 fw-bold" href="#" onClick={() => onNavigate('home')}>
-          Retail ERP
-        </a>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto">
-            <li className="nav-item">
-              <a
-                className="nav-link active"
-                aria-current="page"
-                href="#"
-                onClick={() => onNavigate('home')}
-              >
-                Home
-              </a>
-            </li>
-            <li className="nav-item">
-              {/* New Dashboard link - Comment moved outside onClick attribute */}
-              <a
-                className="nav-link"
-                href="#"
-                onClick={() => onNavigate('dashboard')}
-              >
-                Dashboard
-              </a>
-            </li>
-            <li className="nav-item">
-              <a
-                className="nav-link"
-                href="#"
-                onClick={() => onNavigate('products')}
-              >
-                Products
-              </a>
-            </li>
-            <li className="nav-item">
-              <a
-                className="nav-link"
-                href="#"
-                onClick={() => onNavigate('customers')}
-              >
-                Customers
-              </a>
-            </li>
-            <li className="nav-item">
-              <a
-                className="nav-link"
-                href="#"
-                onClick={() => onNavigate('bills')}
-              >
-                Bills
-              </a>
-            </li>
-          </ul>
+    <header className="sticky-top erp-glass-panel border-bottom" style={{ zIndex: 1020, borderColor: 'var(--border-light)' }}>
+      <nav className="navbar navbar-expand-lg py-2.5">
+        <div className="container-fluid px-3 px-lg-4">
+          {/* Brand Logo & Name */}
+          <a
+            className="navbar-brand d-flex align-items-center gap-2.5 cursor-pointer text-decoration-none"
+            href="#home"
+            onClick={(e) => { e.preventDefault(); onNavigate('home'); }}
+          >
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3 erp-gradient-primary shadow-sm"
+              style={{ width: 38, height: 38 }}
+            >
+              <i className="bi bi-shop fs-5 text-white" />
+            </div>
+            <div>
+              <span className="fw-bolder fs-5 erp-heading d-block lh-1" style={{ letterSpacing: '-0.02em' }}>
+                Retail<span style={{ color: 'var(--erp-primary)' }}>ERP</span>
+              </span>
+              <span className="text-muted d-block text-uppercase" style={{ fontSize: '0.65rem', letterSpacing: '0.08em', fontWeight: 600 }}>
+                Enterprise Suite
+              </span>
+            </div>
+          </a>
+
+          {/* Mobile menu button */}
+          <button
+            className="navbar-toggler border-0 shadow-none p-2"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#erpNavbarNav"
+            aria-controls="erpNavbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+          >
+            <i className="bi bi-list fs-3" />
+          </button>
+
+          {/* Navigation Links */}
+          <div className="collapse navbar-collapse" id="erpNavbarNav">
+            <ul className="navbar-nav mx-auto mb-2 mb-lg-0 gap-1">
+              <li className="nav-item">
+                <a
+                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
+                  href="#home"
+                  onClick={(e) => { e.preventDefault(); onNavigate('home'); }}
+                >
+                  <i className="bi bi-house-door me-1.5" />
+                  Home
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
+                  href="#dashboard"
+                  onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }}
+                >
+                  <i className="bi bi-speedometer2 me-1.5" />
+                  Dashboard
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
+                  href="#products"
+                  onClick={(e) => { e.preventDefault(); onNavigate('products'); }}
+                >
+                  <i className="bi bi-box-seam me-1.5" />
+                  Products
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
+                  href="#customers"
+                  onClick={(e) => { e.preventDefault(); onNavigate('customers'); }}
+                >
+                  <i className="bi bi-people me-1.5" />
+                  Customers
+                </a>
+              </li>
+              <li className="nav-item">
+                <a
+                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
+                  href="#bills"
+                  onClick={(e) => { e.preventDefault(); onNavigate('bills'); }}
+                >
+                  <i className="bi bi-receipt me-1.5" />
+                  Bills
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 }
 
