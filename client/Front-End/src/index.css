@@ -215,3 +215,61 @@ h1, h2, h3, h4, h5, h6, .erp-heading {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Dark Mode Overrides for Bootstrap Components */
+[data-theme='dark'] .card {
+  background-color: var(--bg-card);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+
+[data-theme='dark'] .table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--text-main);
+  --bs-table-border-color: var(--border-light);
+}
+
+[data-theme='dark'] .table-hover > tbody > tr:hover > * {
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] .form-control,
+[data-theme='dark'] .form-select {
+  background-color: var(--bg-subtle);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+
+[data-theme='dark'] .form-control:focus,
+[data-theme='dark'] .form-select:focus {
+  background-color: var(--bg-card);
+  border-color: var(--erp-primary);
+  color: var(--text-main);
+  box-shadow: 0 0 0 0.25rem rgba(79, 70, 229, 0.25);
+}
+
+[data-theme='dark'] .modal-content {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-light);
+}
+
+[data-theme='dark'] .list-group-item {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-light);
+}
+
+[data-theme='dark'] .dropdown-menu {
+  background-color: var(--bg-card);
+  border-color: var(--border-light);
+}
+
+[data-theme='dark'] .dropdown-item {
+  color: var(--text-main);
+}
+
+[data-theme='dark'] .dropdown-item:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-main);
+}
