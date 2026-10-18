@@ -1,23 +1,22 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\App.jsx
 import React, { useState } from 'react';
 import HomePage from './pages/HomePage';
 import ProductsPage from './pages/ProductsPage';
 import CustomersPage from './pages/CustomersPage';
 import BillsPage from './pages/BillsPage';
-import DashboardPage from './pages/DashboardPage'; // Import the new DashboardPage
+import DashboardPage from './pages/DashboardPage';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 
-function App() {
-  // State to keep track of the current page
-  // Added 'dashboard' to the possible page states
-  const [currentPage, setCurrentPage] = useState('home'); // 'home', 'products', 'customers', 'bills', 'dashboard'
+function AppContent() {
+  const [currentPage, setCurrentPage] = useState('home');
 
-  // Function to change the current page
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Conditionally render the current page
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
@@ -28,25 +27,33 @@ function App() {
         return <CustomersPage />;
       case 'bills':
         return <BillsPage />;
-      case 'dashboard': // New case for DashboardPage
+      case 'dashboard':
         return <DashboardPage />;
       default:
-        return <HomePage onNavigate={handlePageChange} />; // Fallback to home
+        return <HomePage onNavigate={handlePageChange} />;
     }
   };
 
   return (
-    <div className="d-flex flex-column min-vh-100 bg-light">
+    <div className="d-flex flex-column min-vh-100" style={{ backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}>
       <Navbar onNavigate={handlePageChange} currentPage={currentPage} />
 
-      <main className="my-auto flex-grow-1">
+      <main className="flex-grow-1">
         {renderPage()}
       </main>
 
-      <footer className="mt-auto py-3 bg-dark text-white text-center">
-        &copy; {new Date().getFullYear()} Retail ERP. All rights reserved.
-      </footer>
+      <Footer onNavigate={handlePageChange} />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

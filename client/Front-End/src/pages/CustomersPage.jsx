@@ -1,29 +1,33 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\pages\CustomersPage.jsx
 import React, { useEffect, useState } from 'react';
-import CustomerForm from '../components/CustomerForm'; // Import the CustomerForm component
+import erpService from '../services/erpService';
+import CustomerForm from '../components/CustomerForm';
+import Badge from '../components/common/Badge';
+import SearchBar from '../components/common/SearchBar';
+import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import EmptyState from '../components/common/EmptyState';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import Pagination from '../components/common/Pagination';
 
 function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showCustomerForm, setShowCustomerForm] = useState(false); // State to toggle form visibility
-  const [editingCustomer, setEditingCustomer] = useState(null); // State to hold customer being edited
-  const [refreshCustomers, setRefreshCustomers] = useState(0); // State to trigger customer list refresh
-
-  const API_URL = 'http://localhost:5219/api/customers'; // Confirm your backend's HTTP port
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [refreshCustomers, setRefreshCustomers] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const fetchCustomers = async () => {
-      setLoading(true); // Set loading to true when fetching
-      setError(null);   // Clear any previous errors
+      setLoading(true);
+      setError(null);
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
-        }
-        const data = await response.json();
-        setCustomers(data);
+        const data = await erpService.getCustomers();
+        setCustomers(data || []);
       } catch (err) {
         console.error("Failed to fetch customers:", err);
         setError(err);
@@ -33,148 +37,224 @@ function CustomersPage() {
     };
 
     fetchCustomers();
-    // Add refreshCustomers to dependency array so it refetches when a new customer is added or updated/deleted
   }, [refreshCustomers]);
 
   const handleCustomerAdded = () => {
-    setShowCustomerForm(false); // Hide the form
-    setEditingCustomer(null); // Clear editing state
-    setRefreshCustomers(prev => prev + 1); // Trigger a refresh of the customer list
+    setShowCustomerForm(false);
+    setEditingCustomer(null);
+    setRefreshCustomers(prev => prev + 1);
   };
 
   const handleCustomerUpdated = () => {
     setShowCustomerForm(false);
-    setEditingCustomer(null); // Clear editing state
-    setRefreshCustomers(prev => prev + 1); // Trigger a refresh of the customer list
+    setEditingCustomer(null);
+    setRefreshCustomers(prev => prev + 1);
   };
 
   const handleEditClick = (customer) => {
-    setEditingCustomer(customer); // Set the customer to be edited
-    setShowCustomerForm(true);    // Show the form
+    setEditingCustomer(customer);
+    setShowCustomerForm(true);
   };
 
-  const handleDeleteClick = async (customerId) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) { // Basic confirmation
-      try {
-        const response = await fetch(`${API_URL}/${customerId}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
-        }
-
-        // If deletion is successful, refresh the list
-        setRefreshCustomers(prev => prev + 1);
-        alert('Customer deleted successfully!'); // User-friendly alert
-      } catch (err) {
-        console.error("Failed to delete customer:", err);
-        alert(`Error deleting customer: ${err.message}`); // User-friendly error alert
-      }
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+    setDeleting(true);
+    try {
+      await erpService.deleteCustomer(customerToDelete.id);
+      setCustomerToDelete(null);
+      setRefreshCustomers(prev => prev + 1);
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      alert(`Error deleting customer: ${err.message}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleCancelForm = () => {
     setShowCustomerForm(false);
-    setEditingCustomer(null); // Clear editing state on cancel
+    setEditingCustomer(null);
   };
 
-  if (loading) {
-    return (
-      <div className="d-flex flex-column justify-content-center align-items-center py-5 bg-light rounded-3 shadow-sm">
-        <div className="spinner-border text-info" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading...</span>
-        </div>
-        <p className="mt-3 fs-5 text-muted">Loading customers...</p>
-      </div>
-    );
-  }
+  const getInitials = (name = '') => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2) || 'CU';
+  };
 
-  if (error) {
+  const filteredCustomers = customers.filter(c => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
     return (
-      <div className="alert alert-danger text-center p-4 rounded-3 shadow-sm" role="alert">
-        <h4 className="alert-heading">Error Loading Customers!</h4>
-        <p>There was a problem fetching data from the backend.</p>
-        <hr />
-        <p className="mb-0">
-          <strong>Details:</strong> {error.message}
-        </p>
-        <p className="mb-0 mt-2">
-          Please ensure your ASP.NET Core backend is running and accessible at: <br />
-          <code className="text-break">{API_URL}</code>
-        </p>
-      </div>
+      c.name?.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q) ||
+      c.contact?.toLowerCase().includes(q)
     );
-  }
+  });
+
+  const paginatedCustomers = filteredCustomers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
-    <div className="container py-4">
-      <h3 className="text-center mb-4">Our Customers</h3>
+    <div className="container-fluid px-3 px-lg-5 py-4 erp-animate-fade-in">
+      {/* Header */}
+      <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+          <div className="d-inline-flex align-items-center gap-2 mb-1">
+            <span className="badge bg-info-subtle text-info-emphasis rounded-pill erp-badge-text">
+              Client Relations
+            </span>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Customer Profiles</span>
+          </div>
+          <h2 className="h3 fw-bold erp-heading mb-1">Customer Management</h2>
+          <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+            Browse registered clients, update contacts, and review sales engagement.
+          </p>
+        </div>
 
-      <div className="d-flex justify-content-end mb-4">
         <button
-          className="btn btn-info text-white" // Bootstrap info color for button
+          className={`btn ${showCustomerForm ? 'btn-outline-secondary' : 'btn-primary'} rounded-pill px-4 py-2 fw-semibold shadow-sm d-inline-flex align-items-center gap-2`}
           onClick={() => {
-            setEditingCustomer(null); // Ensure we are in "add" mode when clicking "Add New Customer"
-            setShowCustomerForm(!showCustomerForm);
+            if (showCustomerForm) handleCancelForm();
+            else { setEditingCustomer(null); setShowCustomerForm(true); }
           }}
         >
-          {showCustomerForm && !editingCustomer ? 'Hide Form' : (editingCustomer ? 'Cancel Edit' : 'Add New Customer')}
+          <i className={`bi ${showCustomerForm ? 'bi-x-lg' : 'bi-person-plus-fill'}`} />
+          <span>{showCustomerForm && !editingCustomer ? 'Close Form' : (editingCustomer ? 'Cancel Edit' : 'Add New Customer')}</span>
         </button>
       </div>
 
       {showCustomerForm && (
-        <CustomerForm
-          initialData={editingCustomer} // Pass the customer data if editing
-          onCustomerAdded={handleCustomerAdded}
-          onCustomerUpdated={handleCustomerUpdated}
-          onCancel={handleCancelForm}
-        />
+        <div className="mb-4">
+          <CustomerForm
+            initialData={editingCustomer}
+            onCustomerAdded={handleCustomerAdded}
+            onCustomerUpdated={handleCustomerUpdated}
+            onCancel={handleCancelForm}
+          />
+        </div>
       )}
 
-      {customers.length === 0 ? (
-        <div className="alert alert-info text-center p-4 rounded-3 shadow-sm" role="alert">
-          <h4 className="alert-heading">No Customers Found!</h4>
-          <p className="mb-0">
-            The backend returned no customer data. Please add some customers using the form above or through Entity Framework Core seeding.
-          </p>
+      {/* Search and Filters */}
+      <div className="card erp-card-elevated border-0 p-3 mb-4 shadow-sm">
+        <div className="row g-3 align-items-center">
+          <div className="col-12 col-md-6 col-lg-5">
+            <SearchBar
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by customer name, email, or phone..."
+            />
+          </div>
+          <div className="col-12 col-md-6 col-lg-7 text-md-end text-muted" style={{ fontSize: '0.875rem' }}>
+            <span>Total Clients: <strong className="text-dark-emphasis">{customers.length}</strong></span>
+          </div>
         </div>
+      </div>
+
+      {/* Customer List */}
+      {loading ? (
+        <LoadingSkeleton type="table" count={5} />
+      ) : filteredCustomers.length === 0 ? (
+        <EmptyState
+          title="No customers found"
+          description="Try modifying your search or click 'Add New Customer' to register a client."
+          icon="bi-people"
+          actionLabel="Add Customer"
+          onAction={() => setShowCustomerForm(true)}
+        />
       ) : (
-        <div className="table-responsive rounded-3 shadow-sm">
-          <table className="table table-hover table-striped mb-0">
-            <thead className="table-primary">
-              <tr>
-                <th scope="col">#</th><th scope="col">Name</th><th scope="col">Contact</th><th scope="col">Email</th><th scope="col">Actions</th> {/* Fixed whitespace */}
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map(customer => (
-                <tr key={customer.id}>
-                  <th scope="row">{customer.id}</th>
-                  <td>{customer.name}</td>
-                  <td>{customer.contact}</td>
-                  <td>{customer.email || '-'}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-warning me-2"
-                      onClick={() => handleEditClick(customer)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleDeleteClick(customer.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+        <div className="card erp-card-elevated border-0 shadow-sm overflow-hidden mb-4">
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                <tr className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th className="ps-4">Customer</th>
+                  <th>Contact Phone</th>
+                  <th>Email Address</th>
+                  <th>Tier Status</th>
+                  <th className="text-end pe-4">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedCustomers.map(customer => (
+                  <tr key={customer.id}>
+                    <td className="ps-4">
+                      <div className="d-flex align-items-center gap-3">
+                        <div
+                          className="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white erp-gradient-primary shadow-sm"
+                          style={{ width: 40, height: 40, fontSize: '0.85rem' }}
+                        >
+                          {getInitials(customer.name)}
+                        </div>
+                        <div>
+                          <div className="fw-bold erp-heading">{customer.name}</div>
+                          <small className="text-muted erp-mono">CID-{String(customer.id).padStart(4, '0')}</small>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="erp-mono text-dark-emphasis">{customer.contact || '-'}</span>
+                    </td>
+                    <td className="text-muted">
+                      {customer.email ? (
+                        <a href={`mailto:${customer.email}`} className="text-decoration-none text-primary">
+                          {customer.email}
+                        </a>
+                      ) : '-'}
+                    </td>
+                    <td>
+                      <Badge variant={customer.tier === 'VIP' ? 'primary' : 'success'} dot size="sm">
+                        {customer.tier || 'Regular'}
+                      </Badge>
+                    </td>
+                    <td className="text-end pe-4">
+                      <div className="d-inline-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
+                          onClick={() => handleEditClick(customer)}
+                        >
+                          <i className="bi bi-pencil me-1" />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger rounded-pill px-2.5"
+                          onClick={() => setCustomerToDelete(customer)}
+                          title="Delete Customer"
+                        >
+                          <i className="bi bi-trash3" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredCustomers.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        show={Boolean(customerToDelete)}
+        onClose={() => setCustomerToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Customer Profile?"
+        message={`Are you sure you want to delete profile for "${customerToDelete?.name}"? Previous billing records will remain archived.`}
+        confirmLabel="Delete Customer"
+        loading={deleting}
+      />
     </div>
   );
 }

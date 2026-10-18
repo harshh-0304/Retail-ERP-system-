@@ -1,159 +1,191 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\components\CustomerForm.jsx
 import React, { useState, useEffect } from 'react';
+import erpService from '../services/erpService';
 
-// CustomerForm now accepts initialData (for editing) and isEditing flag
 function CustomerForm({ onCustomerAdded, onCustomerUpdated, onCancel, initialData }) {
-  const [customer, setCustomer] = useState(initialData || {
+  const [customer, setCustomer] = useState({
     name: '',
     contact: '',
-    email: ''
+    email: '',
+    tier: 'Regular',
+    address: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Determine if we are in editing mode
   const isEditing = !!initialData;
 
-  // Confirm your backend's HTTP port here
-  const API_URL = 'http://localhost:5219/api/customers';
-
-  // Effect to update form fields if initialData changes (e.g., when switching customer to edit)
   useEffect(() => {
-    setCustomer(initialData || { name: '', contact: '', email: '' });
-    setError(null); // Clear errors when data changes
-    setSuccess(false); // Clear success when data changes
+    if (initialData) {
+      setCustomer({
+        name: initialData.name || '',
+        contact: initialData.contact || '',
+        email: initialData.email || '',
+        tier: initialData.tier || 'Regular',
+        address: initialData.address || ''
+      });
+    } else {
+      setCustomer({
+        name: '',
+        contact: '',
+        email: '',
+        tier: 'Regular',
+        address: ''
+      });
+    }
+    setError(null);
+    setSuccess(false);
   }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setCustomer(prevCustomer => ({
-      ...prevCustomer,
-      [name]: value
-    }));
+    setCustomer(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    setSuccess(false);
 
-    // Basic validation
-    if (!customer.name || !customer.contact) {
-      setError("Name and Contact are required.");
+    if (!customer.name.trim() || !customer.contact.trim()) {
+      setError("Customer Name and Contact phone number are required.");
       setSubmitting(false);
       return;
     }
 
     try {
-      const method = isEditing ? 'PUT' : 'POST';
-      const url = isEditing ? `${API_URL}/${customer.id}` : API_URL;
-
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(customer),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
-      }
-
-      const updatedOrNewCustomer = await response.json();
-      setSuccess(true);
-
-      if (!isEditing) {
-        setCustomer({ name: '', contact: '', email: '' }); // Clear form only if adding new
-        if (onCustomerAdded) {
-          onCustomerAdded(updatedOrNewCustomer); // Notify parent for new customer
-        }
+      if (isEditing) {
+        await erpService.updateCustomer(initialData.id, { ...customer, id: initialData.id });
+        setSuccess(true);
+        if (onCustomerUpdated) onCustomerUpdated();
       } else {
-        if (onCustomerUpdated) {
-          onCustomerUpdated(updatedOrNewCustomer); // Notify parent for updated customer
-        }
+        await erpService.createCustomer(customer);
+        setSuccess(true);
+        if (onCustomerAdded) onCustomerAdded();
       }
-
-      setTimeout(() => setSuccess(false), 3000); // Hide success message after 3 seconds
-
     } catch (err) {
-      console.error(`Failed to ${isEditing ? 'update' : 'add'} customer:`, err);
-      setError(err);
+      console.error("Failed to save customer:", err);
+      setError(err.message || 'Error saving customer profile');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="card shadow-lg p-4 mb-4 rounded-3">
-      <h4 className="card-title text-info mb-4">{isEditing ? 'Edit Customer' : 'Add New Customer'}</h4>
-      {success && (
-        <div className="alert alert-success alert-dismissible fade show" role="alert">
-          Customer {isEditing ? 'updated' : 'added'} successfully!
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div className="card erp-card-elevated border-0 p-4 mb-4 erp-animate-fade-in shadow-md">
+      <div className="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom" style={{ borderColor: 'var(--border-light)' }}>
+        <div className="d-flex align-items-center gap-2">
+          <div
+            className="d-flex align-items-center justify-content-center rounded-2 erp-gradient-primary text-white"
+            style={{ width: 34, height: 34 }}
+          >
+            <i className={`bi ${isEditing ? 'bi-pencil-square' : 'bi-person-plus-fill'}`} />
+          </div>
+          <div>
+            <h4 className="h5 fw-bold erp-heading mb-0">{isEditing ? `Edit Customer (${customer.name})` : 'Register New Client Profile'}</h4>
+            <small className="text-muted">Enter contact info, account tier and billing address</small>
+          </div>
         </div>
-      )}
+        <button type="button" className="btn-close" onClick={onCancel} aria-label="Close" />
+      </div>
+
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>Error:</strong> {error.message}
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div className="alert alert-danger d-flex align-items-center gap-2 py-2" role="alert">
+          <i className="bi bi-exclamation-triangle-fill" />
+          <span>{error}</span>
         </div>
       )}
+
+      {success && (
+        <div className="alert alert-success d-flex align-items-center gap-2 py-2" role="alert">
+          <i className="bi bi-check-circle-fill" />
+          <span>Customer profile successfully updated!</span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <label htmlFor="name" className="form-label">Customer Name</label>
-          <input
-            type="text"
-            className="form-control"
-            id="name"
-            name="name"
-            value={customer.name}
-            onChange={handleChange}
-            required
-            disabled={submitting}
-          />
+        <div className="row g-3">
+          <div className="col-12 col-md-6">
+            <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Full Name *</label>
+            <input
+              type="text"
+              name="name"
+              className="form-control"
+              placeholder="e.g., Alexander Wright"
+              value={customer.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="col-12 col-md-6">
+            <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Contact Phone *</label>
+            <input
+              type="tel"
+              name="contact"
+              className="form-control"
+              placeholder="e.g., +1 (555) 234-5678"
+              value={customer.contact}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="col-12 col-md-6">
+            <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Email Address</label>
+            <input
+              type="email"
+              name="email"
+              className="form-control"
+              placeholder="e.g., alex@company.com"
+              value={customer.email}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="col-12 col-md-6">
+            <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Customer Tier</label>
+            <select
+              name="tier"
+              className="form-select"
+              value={customer.tier}
+              onChange={handleChange}
+            >
+              <option value="Regular">Regular Customer</option>
+              <option value="VIP">VIP Account</option>
+              <option value="New">New Prospect</option>
+            </select>
+          </div>
+
+          <div className="col-12">
+            <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Billing / Delivery Address</label>
+            <input
+              type="text"
+              name="address"
+              className="form-control"
+              placeholder="e.g., 742 Evergreen Terrace, Seattle, WA"
+              value={customer.address}
+              onChange={handleChange}
+            />
+          </div>
         </div>
-        <div className="mb-3">
-          <label htmlFor="contact" className="form-label">Contact (Phone)</label>
-          <input
-            type="text"
-            className="form-control"
-            id="contact"
-            name="contact"
-            value={customer.contact}
-            onChange={handleChange}
-            required
+
+        <div className="d-flex justify-content-end gap-2 mt-4 pt-2 border-top" style={{ borderColor: 'var(--border-light)' }}>
+          <button
+            type="button"
+            className="btn btn-light rounded-pill px-4 fw-semibold"
+            onClick={onCancel}
             disabled={submitting}
-          />
-        </div>
-        <div className="mb-3">
-          <label htmlFor="email" className="form-label">Email (Optional)</label>
-          <input
-            type="email"
-            className="form-control"
-            id="email"
-            name="email"
-            value={customer.email || ''} // Handle null email
-            onChange={handleChange}
-            disabled={submitting}
-          />
-        </div>
-        <div className="d-flex justify-content-end gap-2">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={submitting}>
+          >
             Cancel
           </button>
-          <button type="submit" className="btn btn-info" disabled={submitting}>
-            {submitting ? (
-              <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span className="ms-2">{isEditing ? 'Updating...' : 'Adding...'}</span>
-              </>
-            ) : (
-              isEditing ? 'Update Customer' : 'Add Customer'
-            )}
+          <button
+            type="submit"
+            className="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm d-inline-flex align-items-center gap-2"
+            disabled={submitting}
+          >
+            {submitting && <span className="spinner-border spinner-border-sm" role="status" />}
+            <span>{isEditing ? 'Save Changes' : 'Register Customer'}</span>
           </button>
         </div>
       </form>
