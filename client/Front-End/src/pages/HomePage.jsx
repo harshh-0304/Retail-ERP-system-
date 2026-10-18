@@ -47,37 +47,49 @@ function HomePage({ onNavigate }) {
   }, []); // Empty dependency array means this effect runs once after the initial render
 
   return (
-    // Main container takes full viewport height and width, with dark blue background
-    <div className="d-flex flex-column align-items-center justify-content-start py-5 px-3 position-relative overflow-hidden"
-         style={{
-           minHeight: '100vh', // Full viewport height
-           width: '100%',     // Full width
-           backgroundColor: '#1A237E', // Dark Indigo Blue
-           zIndex: 1,
-           paddingTop: 'calc(5rem + 56px)' // Adjust padding to account for fixed navbar height if any
-         }}>
-      {/* Subtle background pattern/texture overlay for visual interest */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundImage: 'radial-gradient(circle at center, rgba(255,255,255,0.05) 1px, transparent 1px), radial-gradient(circle at center, rgba(255,255,255,0.05) 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        backgroundPosition: '0 0, 10px 10px',
-        opacity: 0.2,
-        zIndex: -1,
-      }}></div>
+    <div className="container-fluid px-3 px-lg-5 py-4 py-lg-5 erp-animate-fade-in">
+      {/* Hero Section */}
+      <div className="card border-0 erp-gradient-dark p-4 p-md-5 mb-5 shadow-lg overflow-hidden position-relative" style={{ borderRadius: 'var(--radius-xl)' }}>
+        <div style={{
+          position: 'absolute',
+          top: '-50%',
+          right: '-10%',
+          width: '500px',
+          height: '500px',
+          background: 'radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }} />
 
-      {/* Hero Section - Main Welcome Message */}
-      <div className="text-center mb-5 animate-fade-in" style={{ maxWidth: '900px' }}>
-        <h2 className="display-2 fw-bolder text-white mb-3">
-          Welcome to <span style={{ color: '#FFD700' }}>Retail ERP</span>
-        </h2>
-        <p className="lead text-white-50 text-center" style={{ fontSize: '1.25rem' }}>
-          Your comprehensive, modern solution for seamless management of products, customers, and sales operations. Streamline your retail business with efficiency and precision.
-        </p>
+        <div className="position-relative" style={{ zIndex: 1, maxWidth: 840 }}>
+          <div className="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-3" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }} />
+            <span className="text-white fw-bold erp-badge-text" style={{ fontSize: '0.75rem' }}>ENTERPRISE RETAIL SUITE 2026</span>
+          </div>
+          <h1 className="display-4 fw-bolder text-white mb-3" style={{ letterSpacing: '-0.03em', lineHeight: 1.15 }}>
+            Manage Products, Customers &amp; Sales with <span className="erp-gradient-text">Precision</span>
+          </h1>
+          <p className="lead text-white-50 mb-4" style={{ fontSize: '1.15rem', maxWidth: 680 }}>
+            Unified retail operations platform connecting real-time inventory tracking, customer relationships, and POS billing into one seamless workflow.
+          </p>
+          <div className="d-flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="btn btn-primary px-4 py-2.5 rounded-pill fw-semibold shadow-sm d-inline-flex align-items-center gap-2"
+              onClick={() => onNavigate('dashboard')}
+            >
+              <i className="bi bi-speedometer2" />
+              <span>Launch Dashboard</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-light px-4 py-2.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-2"
+              onClick={() => onNavigate('bills')}
+            >
+              <i className="bi bi-receipt" />
+              <span>New POS Sale</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Dashboard Overview Section - Dynamic KPIs */}
