@@ -11,10 +11,12 @@ function HomePage({ onNavigate }) {
   const [productsInStockCount, setProductsInStockCount] = useState(0);
   const [recentBills, setRecentBills] = useState([]);
   const [loadingKpis, setLoadingKpis] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [kpiError, setKpiError] = useState(null);
 
-  const fetchKpiData = async () => {
-    setLoadingKpis(true);
+  const fetchKpiData = async (manual = false) => {
+    if (manual) setIsRefreshing(true);
+    else setLoadingKpis(true);
     setKpiError(null);
     try {
       const [customersData, productsData, billsData] = await Promise.all([
@@ -37,11 +39,12 @@ function HomePage({ onNavigate }) {
       setKpiError(err.message || 'Error communicating with ERP service');
     } finally {
       setLoadingKpis(false);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchKpiData();
+    fetchKpiData(false);
   }, []);
 
   return (
@@ -345,11 +348,12 @@ function HomePage({ onNavigate }) {
           <div className="col-12 col-md-3 text-md-end">
             <button
               type="button"
-              className="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fw-semibold"
-              onClick={fetchKpiData}
+              className="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5"
+              onClick={() => fetchKpiData(true)}
+              disabled={isRefreshing}
             >
-              <i className="bi bi-arrow-clockwise me-1" />
-              Refresh Health
+              <i className={`bi bi-arrow-clockwise ${isRefreshing ? 'spinner-border spinner-border-sm' : ''}`} />
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh Health'}</span>
             </button>
           </div>
         </div>
