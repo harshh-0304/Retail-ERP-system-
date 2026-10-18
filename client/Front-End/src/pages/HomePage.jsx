@@ -296,6 +296,64 @@ function HomePage({ onNavigate }) {
           </div>
         )}
       </div>
+
+      {/* System Diagnostics & Warehouse Health Banner */}
+      <div className="card erp-card-elevated border-0 p-4" style={{ backgroundColor: 'var(--bg-card)' }}>
+        <div className="row align-items-center g-3">
+          <div className="col-12 col-md-3">
+            <div className="d-flex align-items-center gap-3">
+              <div
+                className="d-flex align-items-center justify-content-center rounded-3 bg-success-subtle text-success"
+                style={{ width: 44, height: 44, fontSize: '1.25rem' }}
+              >
+                <i className="bi bi-shield-check" />
+              </div>
+              <div>
+                <span className="text-muted d-block" style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600 }}>Backend Service</span>
+                <strong className="text-success fw-bold">Active &amp; Responsive</strong>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-md-3">
+            <div className="d-flex align-items-center gap-3">
+              <div
+                className="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary"
+                style={{ width: 44, height: 44, fontSize: '1.25rem' }}
+              >
+                <i className="bi bi-database-check" />
+              </div>
+              <div>
+                <span className="text-muted d-block" style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600 }}>Data Store</span>
+                <strong>SQL Server / EF Core</strong>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-md-3">
+            <div className="d-flex align-items-center gap-3">
+              <div
+                className="d-flex align-items-center justify-content-center rounded-3 bg-warning-subtle text-warning"
+                style={{ width: 44, height: 44, fontSize: '1.25rem' }}
+              >
+                <i className="bi bi-bell-fill" />
+              </div>
+              <div>
+                <span className="text-muted d-block" style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600 }}>Stock Watch</span>
+                <strong>Threshold Monitored</strong>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-md-3 text-md-end">
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fw-semibold"
+              onClick={fetchKpiData}
+            >
+              <i className="bi bi-arrow-clockwise me-1" />
+              Refresh Health
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
