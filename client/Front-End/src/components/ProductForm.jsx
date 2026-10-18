@@ -1,10 +1,14 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\components\ProductForm.jsx
 import React, { useState, useEffect } from 'react';
+import erpService from '../services/erpService';
+import Badge from './common/Badge';
+import { formatCurrency } from '../utils/formatters';
 
-// ProductForm now accepts initialData (for editing) and callbacks for added/updated/cancel
+const CATEGORIES = ['Electronics', 'Audio', 'Furniture', 'Accessories', 'Lighting', 'Appliances', 'General'];
+
 function ProductForm({ onProductAdded, onProductUpdated, onCancel, initialData }) {
-  const [product, setProduct] = useState(initialData || {
+  const [product, setProduct] = useState({
     name: '',
+    category: 'Electronics',
     description: '',
     price: '',
     stockQuantity: ''
@@ -13,174 +17,247 @@ function ProductForm({ onProductAdded, onProductUpdated, onCancel, initialData }
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Determine if we are in editing mode
   const isEditing = !!initialData;
 
-  // Confirm your backend's HTTP port here
-  const API_URL = 'http://localhost:5219/api/products';
-
-  // Effect to update form fields if initialData changes (e.g., when switching product to edit)
   useEffect(() => {
-    setProduct(initialData || { name: '', description: '', price: '', stockQuantity: '' });
-    setError(null); // Clear errors when data changes
-    setSuccess(false); // Clear success when data changes
+    if (initialData) {
+      setProduct({
+        ...initialData,
+        category: initialData.category || 'Electronics',
+        price: String(initialData.price ?? ''),
+        stockQuantity: String(initialData.stockQuantity ?? '')
+      });
+    } else {
+      setProduct({
+        name: '',
+        category: 'Electronics',
+        description: '',
+        price: '',
+        stockQuantity: ''
+      });
+    }
+    setError(null);
+    setSuccess(false);
   }, [initialData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setProduct(prevProduct => ({
-      ...prevProduct,
-      [name]: value
-    }));
+    setProduct(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    setSuccess(false);
 
-    // Basic validation
-    if (!product.name || !product.price || !product.stockQuantity) {
-      setError("Name, Price, and Stock Quantity are required.");
+    if (!product.name?.trim()) {
+      setError("Product Name is required.");
       setSubmitting(false);
       return;
     }
 
-    // Convert price and stockQuantity to numbers
-    const productToSend = {
+    const priceNum = parseFloat(product.price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      setError("Please provide a valid unit price greater than $0.00.");
+      setSubmitting(false);
+      return;
+    }
+
+    const stockNum = parseInt(product.stockQuantity, 10);
+    if (isNaN(stockNum) || stockNum < 0) {
+      setError("Stock Quantity must be 0 or greater.");
+      setSubmitting(false);
+      return;
+    }
+
+    const payload = {
       ...product,
-      price: parseFloat(product.price),
-      stockQuantity: parseInt(product.stockQuantity, 10)
+      name: product.name.trim(),
+      category: product.category,
+      description: product.description?.trim() || '',
+      price: priceNum,
+      stockQuantity: stockNum
     };
 
     try {
-      const method = isEditing ? 'PUT' : 'POST';
-      const url = isEditing ? `${API_URL}/${product.id}` : API_URL;
-
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(productToSend),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
-      }
-
-      const updatedOrNewProduct = await response.json();
-      setSuccess(true);
-
-      if (!isEditing) {
-        setProduct({ name: '', description: '', price: '', stockQuantity: '' }); // Clear form only if adding new
-        if (onProductAdded) {
-          onProductAdded(updatedOrNewProduct); // Notify parent for new product
-        }
+      if (isEditing) {
+        await erpService.updateProduct(product.id, payload);
+        setSuccess(true);
+        if (onProductUpdated) onProductUpdated();
       } else {
-        if (onProductUpdated) {
-          onProductUpdated(updatedOrNewProduct); // Notify parent for updated product
-        }
+        await erpService.createProduct(payload);
+        setSuccess(true);
+        if (onProductAdded) onProductAdded();
       }
-
-      setTimeout(() => setSuccess(false), 3000); // Hide success message after 3 seconds
-
     } catch (err) {
-      console.error(`Failed to ${isEditing ? 'update' : 'add'} product:`, err);
-      setError(err);
+      console.error("Failed to save product:", err);
+      setError(err.message || 'Error saving product');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="card shadow-lg p-4 mb-4 rounded-3">
-      <h4 className="card-title text-primary mb-4">{isEditing ? 'Edit Product' : 'Add New Product'}</h4>
-      {success && (
-        <div className="alert alert-success alert-dismissible fade show" role="alert">
-          Product {isEditing ? 'updated' : 'added'} successfully!
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div className="card erp-card-elevated border-0 p-4 mb-4 erp-animate-fade-in shadow-md">
+      <div className="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom" style={{ borderColor: 'var(--border-light)' }}>
+        <div className="d-flex align-items-center gap-2">
+          <div
+            className="d-flex align-items-center justify-content-center rounded-2 erp-gradient-primary text-white"
+            style={{ width: 34, height: 34 }}
+          >
+            <i className={`bi ${isEditing ? 'bi-pencil-square' : 'bi-box-seam'}`} />
+          </div>
+          <div>
+            <h4 className="h5 fw-bold erp-heading mb-0">{isEditing ? `Edit Product (SKU #${product.id})` : 'Create Inventory Product'}</h4>
+            <small className="text-muted">Enter specifications, pricing and initial stock</small>
+          </div>
         </div>
-      )}
+        <button type="button" className="btn-close" onClick={onCancel} aria-label="Close" />
+      </div>
+
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>Error:</strong> {error.message}
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div className="alert alert-danger d-flex align-items-center gap-2 py-2" role="alert">
+          <i className="bi bi-exclamation-triangle-fill" />
+          <span>{error}</span>
         </div>
       )}
-      <form onSubmit={handleSubmit}>
-        <div className="mb-3">
-          <label htmlFor="name" className="form-label">Product Name</label>
-          <input
-            type="text"
-            className="form-control"
-            id="name"
-            name="name"
-            value={product.name}
-            onChange={handleChange}
-            required
-            disabled={submitting}
-          />
+
+      {success && (
+        <div className="alert alert-success d-flex align-items-center gap-2 py-2" role="alert">
+          <i className="bi bi-check-circle-fill" />
+          <span>Product successfully saved to catalog!</span>
         </div>
-        <div className="mb-3">
-          <label htmlFor="description" className="form-label">Description</label>
-          <textarea
-            className="form-control"
-            id="description"
-            name="description"
-            value={product.description || ''} // Handle null description
-            onChange={handleChange}
-            rows="3"
-            disabled={submitting}
-          ></textarea>
+      )}
+
+      <div className="row g-4">
+        {/* Form Fields */}
+        <div className="col-12 col-lg-8">
+          <form onSubmit={handleSubmit}>
+            <div className="row g-3">
+              <div className="col-12 col-md-8">
+                <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Product Title *</label>
+                <input
+                  type="text"
+                  name="name"
+                  className="form-control"
+                  placeholder="e.g., Wireless Mechanical Keyboard"
+                  value={product.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-12 col-md-4">
+                <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Category</label>
+                <select
+                  name="category"
+                  className="form-select"
+                  value={product.category}
+                  onChange={handleChange}
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-12 col-md-6">
+                <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Unit Price ($) *</label>
+                <div className="input-group">
+                  <span className="input-group-text">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="price"
+                    className="form-control"
+                    placeholder="0.00"
+                    value={product.price}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="col-12 col-md-6">
+                <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Available Stock Units *</label>
+                <input
+                  type="number"
+                  min="0"
+                  name="stockQuantity"
+                  className="form-control"
+                  placeholder="e.g., 50"
+                  value={product.stockQuantity}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="col-12">
+                <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Description &amp; Specifications</label>
+                <textarea
+                  name="description"
+                  rows="3"
+                  className="form-control"
+                  placeholder="Brief summary of product features, dimensions, or compatibility..."
+                  value={product.description}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="d-flex justify-content-end gap-2 mt-4 pt-2 border-top" style={{ borderColor: 'var(--border-light)' }}>
+              <button
+                type="button"
+                className="btn btn-light rounded-pill px-4 fw-semibold"
+                onClick={onCancel}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm d-inline-flex align-items-center gap-2"
+                disabled={submitting}
+              >
+                {submitting && <span className="spinner-border spinner-border-sm" role="status" />}
+                <span>{isEditing ? 'Save Changes' : 'Add to Inventory'}</span>
+              </button>
+            </div>
+          </form>
         </div>
-        <div className="row mb-3">
-          <div className="col-md-6">
-            <label htmlFor="price" className="form-label">Price</label>
-            <input
-              type="number"
-              step="0.01"
-              className="form-control"
-              id="price"
-              name="price"
-              value={product.price}
-              onChange={handleChange}
-              required
-              disabled={submitting}
-            />
+
+        {/* Live Preview Card */}
+        <div className="col-12 col-lg-4">
+          <div className="card h-100 p-3 bg-subtle border erp-card-elevated" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+            <span className="text-uppercase text-muted fw-bold erp-badge-text mb-3 d-block">
+              Live Catalog Preview
+            </span>
+            <div className="card erp-card-elevated p-3 border-0 flex-grow-1 d-flex flex-column justify-content-between">
+              <div>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="badge bg-secondary-subtle text-secondary-emphasis rounded-pill erp-badge-text">
+                    {product.category || 'Category'}
+                  </span>
+                  <Badge variant={Number(product.stockQuantity) < 10 ? 'warning' : 'success'} dot size="sm">
+                    {Number(product.stockQuantity) || 0} in stock
+                  </Badge>
+                </div>
+                <h5 className="fw-bold erp-heading mb-1">{product.name || 'Product Title'}</h5>
+                <p className="text-muted small mb-3">
+                  {product.description || 'Product details will appear here as you type...'}
+                </p>
+              </div>
+              <div className="pt-2 border-top d-flex justify-content-between align-items-center" style={{ borderColor: 'var(--border-light)' }}>
+                <span className="h5 fw-bolder text-primary mb-0 erp-mono">
+                  {formatCurrency(Number(product.price) || 0)}
+                </span>
+                <span className="text-muted" style={{ fontSize: '0.75rem' }}>SKU #{product.id || 'NEW'}</span>
+              </div>
+            </div>
           </div>
-          <div className="col-md-6">
-            <label htmlFor="stockQuantity" className="form-label">Stock Quantity</label>
-            <input
-              type="number"
-              className="form-control"
-              id="stockQuantity"
-              name="stockQuantity"
-              value={product.stockQuantity}
-              onChange={handleChange}
-              required
-              disabled={submitting}
-            />
-          </div>
         </div>
-        <div className="d-flex justify-content-end gap-2">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={submitting}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? (
-              <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span className="ms-2">{isEditing ? 'Updating...' : 'Adding...'}</span>
-              </>
-            ) : (
-              isEditing ? 'Update Product' : 'Add Product'
-            )}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }
