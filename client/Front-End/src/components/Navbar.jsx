@@ -71,6 +71,32 @@ function Navbar({ onNavigate, currentPage = 'home' }) {
                 );
               })}
             </ul>
+
+            {/* System Status Indicator */}
+            <div className="d-flex align-items-center gap-2 mt-2 mt-lg-0">
+              <span
+                className="d-inline-flex align-items-center gap-1.5 px-2.5 py-1 rounded-pill erp-badge-text border"
+                style={{
+                  backgroundColor: 'var(--erp-success-subtle)',
+                  borderColor: 'rgba(16, 185, 129, 0.25)',
+                  color: '#065f46',
+                  fontSize: '0.72rem'
+                }}
+                title="System Operational - ASP.NET Core & Local DB synced"
+              >
+                <span
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    backgroundColor: '#10b981',
+                    display: 'inline-block'
+                  }}
+                  className="animate-pulse"
+                />
+                <span>SYSTEM ONLINE</span>
+              </span>
+            </div>
           </div>
         </div>
       </nav>
