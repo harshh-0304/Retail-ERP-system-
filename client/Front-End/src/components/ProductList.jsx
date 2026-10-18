@@ -19,6 +19,27 @@ function ProductList({
   const [error, setError] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedProducts = [...products].sort((a, b) => {
+    const valA = a[sortBy] ?? '';
+    const valB = b[sortBy] ?? '';
+    if (typeof valA === 'string') {
+      const comp = valA.localeCompare(String(valB));
+      return sortOrder === 'asc' ? comp : -comp;
+    }
+    return sortOrder === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
+  });
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -88,7 +109,7 @@ function ProductList({
       {/* Grid View */}
       {viewMode === 'grid' ? (
         <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-          {products.map(product => (
+          {sortedProducts.map(product => (
             <div key={product.id} className="col">
               <div className="card erp-card-elevated erp-hover-lift h-100 p-4 border-0 d-flex flex-column justify-content-between">
                 <div>
@@ -143,15 +164,35 @@ function ProductList({
             <table className="table table-hover align-middle mb-0">
               <thead style={{ backgroundColor: 'var(--bg-subtle)' }}>
                 <tr className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th className="ps-4">Product Name</th>
-                  <th>Category</th>
-                  <th>Unit Price</th>
-                  <th>Stock Status</th>
+                  <th className="ps-4 cursor-pointer" onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
+                    <div className="d-inline-flex align-items-center gap-1">
+                      <span>Product Name</span>
+                      <i className={`bi ${sortBy === 'name' ? (sortOrder === 'asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up text-primary') : 'bi-arrow-down-up text-muted opacity-50'}`} />
+                    </div>
+                  </th>
+                  <th className="cursor-pointer" onClick={() => handleSort('category')} style={{ cursor: 'pointer' }}>
+                    <div className="d-inline-flex align-items-center gap-1">
+                      <span>Category</span>
+                      <i className={`bi ${sortBy === 'category' ? (sortOrder === 'asc' ? 'bi-sort-alpha-down text-primary' : 'bi-sort-alpha-up text-primary') : 'bi-arrow-down-up text-muted opacity-50'}`} />
+                    </div>
+                  </th>
+                  <th className="cursor-pointer" onClick={() => handleSort('price')} style={{ cursor: 'pointer' }}>
+                    <div className="d-inline-flex align-items-center gap-1">
+                      <span>Unit Price</span>
+                      <i className={`bi ${sortBy === 'price' ? (sortOrder === 'asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up text-primary') : 'bi-arrow-down-up text-muted opacity-50'}`} />
+                    </div>
+                  </th>
+                  <th className="cursor-pointer" onClick={() => handleSort('stockQuantity')} style={{ cursor: 'pointer' }}>
+                    <div className="d-inline-flex align-items-center gap-1">
+                      <span>Stock Status</span>
+                      <i className={`bi ${sortBy === 'stockQuantity' ? (sortOrder === 'asc' ? 'bi-sort-numeric-down text-primary' : 'bi-sort-numeric-up text-primary') : 'bi-arrow-down-up text-muted opacity-50'}`} />
+                    </div>
+                  </th>
                   <th className="text-end pe-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map(product => (
+                {sortedProducts.map(product => (
                   <tr key={product.id}>
                     <td className="ps-4">
                       <div className="fw-bold erp-heading">{product.name}</div>
