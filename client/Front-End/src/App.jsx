@@ -37,7 +37,7 @@ function App() {
 
   return (
     <div className="d-flex flex-column min-vh-100 bg-light">
-      <Navbar onNavigate={handlePageChange} />
+      <Navbar onNavigate={handlePageChange} currentPage={currentPage} />
 
       <main className="my-auto flex-grow-1">
         {renderPage()}

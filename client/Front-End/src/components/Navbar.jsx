@@ -43,56 +43,33 @@ function Navbar({ onNavigate, currentPage = 'home' }) {
           {/* Navigation Links */}
           <div className="collapse navbar-collapse" id="erpNavbarNav">
             <ul className="navbar-nav mx-auto mb-2 mb-lg-0 gap-1">
-              <li className="nav-item">
-                <a
-                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
-                  href="#home"
-                  onClick={(e) => { e.preventDefault(); onNavigate('home'); }}
-                >
-                  <i className="bi bi-house-door me-1.5" />
-                  Home
-                </a>
-              </li>
-              <li className="nav-item">
-                <a
-                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
-                  href="#dashboard"
-                  onClick={(e) => { e.preventDefault(); onNavigate('dashboard'); }}
-                >
-                  <i className="bi bi-speedometer2 me-1.5" />
-                  Dashboard
-                </a>
-              </li>
-              <li className="nav-item">
-                <a
-                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
-                  href="#products"
-                  onClick={(e) => { e.preventDefault(); onNavigate('products'); }}
-                >
-                  <i className="bi bi-box-seam me-1.5" />
-                  Products
-                </a>
-              </li>
-              <li className="nav-item">
-                <a
-                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
-                  href="#customers"
-                  onClick={(e) => { e.preventDefault(); onNavigate('customers'); }}
-                >
-                  <i className="bi bi-people me-1.5" />
-                  Customers
-                </a>
-              </li>
-              <li className="nav-item">
-                <a
-                  className="nav-link px-3 py-2 rounded-pill fw-medium cursor-pointer"
-                  href="#bills"
-                  onClick={(e) => { e.preventDefault(); onNavigate('bills'); }}
-                >
-                  <i className="bi bi-receipt me-1.5" />
-                  Bills
-                </a>
-              </li>
+              {[
+                { id: 'home', label: 'Home', icon: 'bi-house-door' },
+                { id: 'dashboard', label: 'Dashboard', icon: 'bi-speedometer2' },
+                { id: 'products', label: 'Products', icon: 'bi-box-seam' },
+                { id: 'customers', label: 'Customers', icon: 'bi-people' },
+                { id: 'bills', label: 'Bills & POS', icon: 'bi-receipt' },
+              ].map(item => {
+                const isActive = currentPage === item.id;
+                return (
+                  <li key={item.id} className="nav-item">
+                    <a
+                      className={`nav-link px-3 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1.5 transition-all ${isActive ? 'active' : ''}`}
+                      href={`#${item.id}`}
+                      style={{
+                        backgroundColor: isActive ? 'var(--erp-primary)' : 'transparent',
+                        color: isActive ? '#ffffff' : 'var(--text-main)',
+                        boxShadow: isActive ? '0 2px 4px rgba(79, 70, 229, 0.25)' : 'none',
+                        fontSize: '0.9rem'
+                      }}
+                      onClick={(e) => { e.preventDefault(); onNavigate(item.id); }}
+                    >
+                      <i className={`bi ${item.icon}`} />
+                      <span>{item.label}</span>
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
