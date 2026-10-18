@@ -71,19 +71,38 @@ function ProductsPage() {
   };
 
   return (
-    <div className="container py-4">
-      <h2 className="display-4 fw-bold text-center mb-4">Our Products</h2>
+    <div className="container-fluid px-3 px-lg-5 py-4 erp-animate-fade-in">
+      {/* Page Header with Stats */}
+      <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+          <div className="d-inline-flex align-items-center gap-2 mb-1">
+            <span className="badge bg-primary-subtle text-primary rounded-pill erp-badge-text">
+              Inventory Control
+            </span>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Live Stock Levels</span>
+          </div>
+          <h2 className="h3 fw-bold erp-heading mb-1">Products &amp; Warehouse Inventory</h2>
+          <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+            Track product catalog, monitor reorder thresholds, and adjust unit pricing.
+          </p>
+        </div>
 
-      <div className="d-flex justify-content-end mb-4">
-        <button
-          className="btn btn-success"
-          onClick={() => {
-            setEditingProduct(null); // Ensure we are in "add" mode when clicking "Add New Product"
-            setShowProductForm(!showProductForm);
-          }}
-        >
-          {showProductForm && !editingProduct ? 'Hide Form' : (editingProduct ? 'Cancel Edit' : 'Add New Product')}
-        </button>
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <button
+            className={`btn ${showProductForm ? 'btn-outline-secondary' : 'btn-primary'} rounded-pill px-4 py-2 fw-semibold shadow-sm d-inline-flex align-items-center gap-2`}
+            onClick={() => {
+              if (showProductForm) {
+                handleCancelForm();
+              } else {
+                setEditingProduct(null);
+                setShowProductForm(true);
+              }
+            }}
+          >
+            <i className={`bi ${showProductForm ? 'bi-x-lg' : 'bi-plus-lg'}`} />
+            <span>{showProductForm && !editingProduct ? 'Close Form' : (editingProduct ? 'Cancel Edit' : 'Add New Product')}</span>
+          </button>
+        </div>
       </div>
 
       {showProductForm && (
