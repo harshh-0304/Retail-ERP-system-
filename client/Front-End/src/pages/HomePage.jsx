@@ -1,53 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/common/StatCard';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
-import { formatCurrency, formatNumber } from '../utils/formatters';
+import Badge from '../components/common/Badge';
+import { formatCurrency, formatNumber, formatDate } from '../utils/formatters';
 import erpService from '../services/erpService';
 
 function HomePage({ onNavigate }) {
-  const [totalSales, setTotalSales] = useState('...'); // Placeholder for loading state
-  const [activeCustomersCount, setActiveCustomersCount] = useState('...');
-  const [productsInStockCount, setProductsInStockCount] = useState('...');
+  const [totalSales, setTotalSales] = useState(0);
+  const [activeCustomersCount, setActiveCustomersCount] = useState(0);
+  const [productsInStockCount, setProductsInStockCount] = useState(0);
+  const [recentBills, setRecentBills] = useState([]);
   const [loadingKpis, setLoadingKpis] = useState(true);
   const [kpiError, setKpiError] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:5219/api'; // Base URL for your backend API
+  const fetchKpiData = async () => {
+    setLoadingKpis(true);
+    setKpiError(null);
+    try {
+      const [customersData, productsData, billsData] = await Promise.all([
+        erpService.getCustomers(),
+        erpService.getProducts(),
+        erpService.getBills()
+      ]);
+
+      setActiveCustomersCount(customersData?.length || 0);
+
+      const totalStock = (productsData || []).reduce((sum, p) => sum + (Number(p.stockQuantity) || 0), 0);
+      setProductsInStockCount(totalStock);
+
+      const totalAmount = (billsData || []).reduce((sum, b) => sum + (Number(b.totalAmount) || 0), 0);
+      setTotalSales(totalAmount);
+
+      setRecentBills((billsData || []).slice(0, 5));
+    } catch (err) {
+      console.error("Failed to fetch KPI data:", err);
+      setKpiError(err.message || 'Error communicating with ERP service');
+    } finally {
+      setLoadingKpis(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchKpiData = async () => {
-      setLoadingKpis(true);
-      setKpiError(null);
-      try {
-        // Fetch Customers
-        const customersResponse = await fetch(`${API_BASE_URL}/customers`);
-        if (!customersResponse.ok) throw new Error(`HTTP error! Status: ${customersResponse.status} for customers.`);
-        const customersData = await customersResponse.json();
-        setActiveCustomersCount(customersData.length);
-
-        // Fetch Products and calculate total stock
-        const productsResponse = await fetch(`${API_BASE_URL}/products`);
-        if (!productsResponse.ok) throw new Error(`HTTP error! Status: ${productsResponse.status} for products.`);
-        const productsData = await productsResponse.json();
-        const totalStock = productsData.reduce((sum, product) => sum + product.stockQuantity, 0);
-        setProductsInStockCount(totalStock);
-
-        // Fetch Bills and calculate total sales
-        const billsResponse = await fetch(`${API_BASE_URL}/bills`);
-        if (!billsResponse.ok) throw new Error(`HTTP error! Status: ${billsResponse.status} for bills.`);
-        const billsData = await billsResponse.json();
-        const totalAmount = billsData.reduce((sum, bill) => sum + bill.totalAmount, 0);
-        setTotalSales(totalAmount.toFixed(2)); // Format to 2 decimal places
-
-      } catch (err) {
-        console.error("Failed to fetch KPI data:", err);
-        setKpiError(err.message);
-      } finally {
-        setLoadingKpis(false);
-      }
-    };
-
     fetchKpiData();
-  }, []); // Empty dependency array means this effect runs once after the initial render
+  }, []);
 
   return (
     <div className="container-fluid px-3 px-lg-5 py-4 py-lg-5 erp-animate-fade-in">
@@ -229,6 +224,77 @@ function HomePage({ onNavigate }) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Recent Sales & Invoices Snapshot */}
+      <div className="card erp-card-elevated border-0 p-4 mb-4">
+        <div className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom" style={{ borderColor: 'var(--border-light)' }}>
+          <div className="d-flex align-items-center gap-2">
+            <div
+              className="d-flex align-items-center justify-content-center rounded-2 bg-primary-subtle text-primary"
+              style={{ width: 32, height: 32 }}
+            >
+              <i className="bi bi-clock-history fs-6" />
+            </div>
+            <div>
+              <h4 className="h6 fw-bold erp-heading mb-0">Recent Sales &amp; Invoices</h4>
+              <small className="text-muted">Latest POS transactions recorded</small>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1.5"
+            onClick={() => onNavigate('bills')}
+          >
+            <span>All Bills</span>
+            <i className="bi bi-arrow-right" />
+          </button>
+        </div>
+
+        {recentBills.length === 0 ? (
+          <div className="text-center py-4 text-muted">
+            <i className="bi bi-receipt fs-2 mb-2 d-block" />
+            <p className="mb-0">No recent sales recorded yet. Process a new bill to see it here.</p>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead>
+                <tr className="text-muted" style={{ fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                  <th>Invoice ID</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th>Payment Method</th>
+                  <th className="text-end">Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentBills.map(bill => (
+                  <tr key={bill.id} style={{ fontSize: '0.9rem' }}>
+                    <td>
+                      <span className="fw-bold erp-mono text-primary">#{bill.id}</span>
+                    </td>
+                    <td>
+                      <div className="fw-semibold">{bill.customer?.name || 'Walk-in Customer'}</div>
+                      <small className="text-muted">{bill.customer?.contact || ''}</small>
+                    </td>
+                    <td className="text-muted">
+                      {formatDate(bill.billDate)}
+                    </td>
+                    <td>
+                      <Badge variant="primary" dot size="sm">
+                        {bill.paymentMethod || 'Cash'}
+                      </Badge>
+                    </td>
+                    <td className="text-end fw-bold text-success">
+                      {formatCurrency(bill.totalAmount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
