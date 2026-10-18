@@ -7,6 +7,7 @@ function ProductsPage() {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null); // State to hold product being edited
   const [refreshProducts, setRefreshProducts] = useState(0); // State to trigger ProductList refresh
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
 
   // States for search and filter input fields (controlled by user typing)
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,6 +89,28 @@ function ProductsPage() {
         </div>
 
         <div className="d-flex align-items-center gap-2 flex-wrap">
+          {/* View Mode Toggle */}
+          <div className="btn-group rounded-pill p-1 border shadow-sm" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-light)' }}>
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1.5 border-0 ${viewMode === 'table' ? 'btn-primary shadow-sm' : 'btn-light'}`}
+              onClick={() => setViewMode('table')}
+              title="Table View"
+            >
+              <i className="bi bi-table" />
+              <span className="d-none d-sm-inline">Table</span>
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1.5 border-0 ${viewMode === 'grid' ? 'btn-primary shadow-sm' : 'btn-light'}`}
+              onClick={() => setViewMode('grid')}
+              title="Cards Grid View"
+            >
+              <i className="bi bi-grid-fill" />
+              <span className="d-none d-sm-inline">Grid</span>
+            </button>
+          </div>
+
           <button
             className={`btn ${showProductForm ? 'btn-outline-secondary' : 'btn-primary'} rounded-pill px-4 py-2 fw-semibold shadow-sm d-inline-flex align-items-center gap-2`}
             onClick={() => {
@@ -151,13 +174,14 @@ function ProductsPage() {
         </div>
       </div>
 
-      {/* Product List - now receives applied search and filter terms */}
+      {/* Product List - now receives applied search, filter terms and viewMode */}
       <ProductList
         refreshTrigger={refreshProducts}
         onEditProduct={handleEditClick}
         onProductDeleted={handleProductDeleted}
-        searchTerm={appliedSearchTerm} // Pass applied search term
-        minStock={appliedMinStockFilter} // Pass applied min stock filter
+        searchTerm={appliedSearchTerm}
+        minStock={appliedMinStockFilter}
+        viewMode={viewMode}
       />
     </div>
   );
