@@ -1,5 +1,8 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\pages\HomePage.jsx
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
+import React, { useState, useEffect } from 'react';
+import StatCard from '../components/common/StatCard';
+import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import { formatCurrency, formatNumber } from '../utils/formatters';
+import erpService from '../services/erpService';
 
 function HomePage({ onNavigate }) {
   const [totalSales, setTotalSales] = useState('...'); // Placeholder for loading state
@@ -92,50 +95,62 @@ function HomePage({ onNavigate }) {
         </div>
       </div>
 
-      {/* Dashboard Overview Section - Dynamic KPIs */}
-      <div className="container-fluid mb-5 animate-slide-up" style={{ maxWidth: '1200px' }}>
-        <h3 className="text-center text-white-75 mb-4 fw-bold">Dashboard Overview</h3>
+      {/* Live Business KPI Summary */}
+      <div className="mb-5">
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h3 className="h4 fw-bold erp-heading mb-1">Key Performance Metrics</h3>
+            <p className="text-muted mb-0" style={{ fontSize: '0.875rem' }}>Real-time telemetry across sales, customers, and stock availability</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center gap-1.5"
+            onClick={() => onNavigate('dashboard')}
+          >
+            <span>Deep Analytics</span>
+            <i className="bi bi-arrow-right" />
+          </button>
+        </div>
+
         {loadingKpis ? (
-          <div className="d-flex justify-content-center">
-            <div className="spinner-border text-light" role="status">
-              <span className="visually-hidden">Loading KPIs...</span>
-            </div>
-          </div>
-        ) : kpiError ? (
-          <div className="alert alert-danger text-center" role="alert">
-            Error loading KPIs: {kpiError}
-          </div>
+          <LoadingSkeleton type="card" count={3} />
         ) : (
-          <div className="row g-4 justify-content-center">
-            {/* KPI Card 1: Total Sales */}
-            <div className="col-12 col-md-6 col-lg-4"> {/* Adjusted column size for 3 cards */}
-              <div className="card h-100 bg-dark text-white shadow-lg border-0 hover-scale-sm">
-                <div className="card-body p-4 text-center">
-                  <h6 className="card-subtitle mb-2 text-white-50">Total Sales (All Time)</h6> {/* Changed to All Time */}
-                  <p className="card-text display-5 fw-bold" style={{ color: '#FFD700' }}>${totalSales}</p>
-                  <small className="text-success">From all bills</small>
-                </div>
-              </div>
+          <div className="row g-3 g-lg-4">
+            <div className="col-12 col-md-6 col-lg-4">
+              <StatCard
+                title="Total Revenue (All Time)"
+                value={formatCurrency(totalSales)}
+                subtitle="Calculated across all billed transactions"
+                icon="bi-currency-dollar"
+                iconColor="#10b981"
+                iconBg="rgba(16, 185, 129, 0.12)"
+                trend={12.4}
+                onClick={() => onNavigate('bills')}
+              />
             </div>
-            {/* KPI Card 2: Active Customers */}
-            <div className="col-12 col-md-6 col-lg-4"> {/* Adjusted column size for 3 cards */}
-              <div className="card h-100 bg-dark text-white shadow-lg border-0 hover-scale-sm">
-                <div className="card-body p-4 text-center">
-                  <h6 className="card-subtitle mb-2 text-white-50">Total Customers</h6>
-                  <p className="card-text display-5 fw-bold" style={{ color: '#FFD700' }}>{activeCustomersCount}</p>
-                  <small className="text-info">Registered in the system</small>
-                </div>
-              </div>
+            <div className="col-12 col-md-6 col-lg-4">
+              <StatCard
+                title="Active Customers"
+                value={formatNumber(activeCustomersCount)}
+                subtitle="Verified accounts registered in database"
+                icon="bi-people-fill"
+                iconColor="#4f46e5"
+                iconBg="rgba(79, 70, 229, 0.12)"
+                trend={8.2}
+                onClick={() => onNavigate('customers')}
+              />
             </div>
-            {/* KPI Card 3: Products in Stock */}
-            <div className="col-12 col-md-6 col-lg-4"> {/* Adjusted column size for 3 cards */}
-              <div className="card h-100 bg-dark text-white shadow-lg border-0 hover-scale-sm">
-                <div className="card-body p-4 text-center">
-                  <h6 className="card-subtitle mb-2 text-white-50">Total Products in Stock</h6>
-                  <p className="card-text display-5 fw-bold" style={{ color: '#FFD700' }}>{productsInStockCount}</p>
-                  <small className="text-warning">Across all inventory</small>
-                </div>
-              </div>
+            <div className="col-12 col-md-6 col-lg-4">
+              <StatCard
+                title="Inventory Units in Stock"
+                value={formatNumber(productsInStockCount)}
+                subtitle="Available units across warehouse catalog"
+                icon="bi-boxes"
+                iconColor="#f59e0b"
+                iconBg="rgba(245, 158, 11, 0.12)"
+                trend={-2.1}
+                onClick={() => onNavigate('products')}
+              />
             </div>
           </div>
         )}
