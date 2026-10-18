@@ -99,6 +99,51 @@ function Navbar({ onNavigate, currentPage = 'home' }) {
                 <span>SYSTEM ONLINE</span>
               </span>
 
+              {/* Quick Action Dropdown */}
+              <div className="dropdown">
+                <button
+                  className="btn btn-primary btn-sm rounded-pill px-3 py-1.5 fw-semibold dropdown-toggle d-inline-flex align-items-center gap-1.5 shadow-sm"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <i className="bi bi-plus-lg" />
+                  <span>Create</span>
+                </button>
+                <ul className="dropdown-menu dropdown-menu-end shadow-lg border-0 erp-animate-fade-in" style={{ borderRadius: 'var(--radius-lg)' }}>
+                  <li>
+                    <a
+                      className="dropdown-item d-flex align-items-center gap-2 py-2"
+                      href="#create-bill"
+                      onClick={(e) => { e.preventDefault(); onNavigate('bills'); }}
+                    >
+                      <i className="bi bi-receipt text-success fs-6" />
+                      <span>New Bill / POS Sale</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      className="dropdown-item d-flex align-items-center gap-2 py-2"
+                      href="#create-product"
+                      onClick={(e) => { e.preventDefault(); onNavigate('products'); }}
+                    >
+                      <i className="bi bi-box-seam text-primary fs-6" />
+                      <span>New Inventory Product</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      className="dropdown-item d-flex align-items-center gap-2 py-2"
+                      href="#create-customer"
+                      onClick={(e) => { e.preventDefault(); onNavigate('customers'); }}
+                    >
+                      <i className="bi bi-person-plus text-info fs-6" />
+                      <span>New Customer Record</span>
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
               {/* Theme Switcher Button */}
               <button
                 type="button"
