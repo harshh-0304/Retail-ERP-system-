@@ -4,6 +4,7 @@ import Badge from './common/Badge';
 import LoadingSkeleton from './common/LoadingSkeleton';
 import EmptyState from './common/EmptyState';
 import ConfirmDialog from './common/ConfirmDialog';
+import Pagination from './common/Pagination';
 import { formatCurrency } from '../utils/formatters';
 
 function ProductList({
@@ -21,6 +22,8 @@ function ProductList({
   const [deleting, setDeleting] = useState(false);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -40,6 +43,8 @@ function ProductList({
     }
     return sortOrder === 'asc' ? Number(valA) - Number(valB) : Number(valB) - Number(valA);
   });
+
+  const paginatedProducts = sortedProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -109,7 +114,7 @@ function ProductList({
       {/* Grid View */}
       {viewMode === 'grid' ? (
         <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-          {sortedProducts.map(product => (
+          {paginatedProducts.map(product => (
             <div key={product.id} className="col">
               <div className="card erp-card-elevated erp-hover-lift h-100 p-4 border-0 d-flex flex-column justify-content-between">
                 <div>
@@ -192,7 +197,7 @@ function ProductList({
                 </tr>
               </thead>
               <tbody>
-                {sortedProducts.map(product => (
+                {paginatedProducts.map(product => (
                   <tr key={product.id}>
                     <td className="ps-4">
                       <div className="fw-bold erp-heading">{product.name}</div>
@@ -236,6 +241,15 @@ function ProductList({
           </div>
         </div>
       )}
+
+      {/* Pagination Controls */}
+      <Pagination
+        currentPage={currentPage}
+        totalItems={sortedProducts.length}
+        pageSize={pageSize}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
