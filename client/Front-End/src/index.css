@@ -152,3 +152,66 @@ h1, h2, h3, h4, h5, h6, .erp-heading {
     radial-gradient(at 90% 10%, rgba(14, 165, 233, 0.25) 0px, transparent 50%),
     radial-gradient(at 50% 80%, rgba(16, 185, 129, 0.2) 0px, transparent 50%);
 }
+
+/* Micro-animations & Transitions */
+@keyframes erpFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes erpFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes erpPulseGlow {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px rgba(79, 70, 229, 0.4)); }
+  50% { opacity: 0.7; filter: drop-shadow(0 0 10px rgba(79, 70, 229, 0.8)); }
+}
+
+@keyframes erpShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.erp-animate-fade-in {
+  animation: erpFadeIn 0.35s ease-out forwards;
+}
+
+.erp-animate-float {
+  animation: erpFloat 4s ease-in-out infinite;
+}
+
+.erp-hover-lift {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.erp-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.erp-shimmer-bg {
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--border-light) 50%, var(--bg-subtle) 75%);
+  background-size: 200% 100%;
+  animation: erpShimmer 1.8s infinite;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
