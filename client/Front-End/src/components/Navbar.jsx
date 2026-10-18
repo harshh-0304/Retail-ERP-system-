@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 function Navbar({ onNavigate, currentPage = 'home' }) {
+  const { theme, toggleTheme, isDark } = useTheme();
   return (
     <header className="sticky-top erp-glass-panel border-bottom" style={{ zIndex: 1020, borderColor: 'var(--border-light)' }}>
       <nav className="navbar navbar-expand-lg py-2.5">
@@ -96,6 +98,25 @@ function Navbar({ onNavigate, currentPage = 'home' }) {
                 />
                 <span>SYSTEM ONLINE</span>
               </span>
+
+              {/* Theme Switcher Button */}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center p-0 border"
+                style={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: 'var(--bg-card)',
+                  borderColor: 'var(--border-light)',
+                  color: isDark ? '#fbbf24' : 'var(--text-main)',
+                  transition: 'transform var(--transition-fast)'
+                }}
+                onClick={toggleTheme}
+                title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+                aria-label="Toggle theme"
+              >
+                <i className={`bi ${isDark ? 'bi-sun-fill' : 'bi-moon-stars-fill'} fs-6`} />
+              </button>
             </div>
           </div>
         </div>
