@@ -1,264 +1,319 @@
-// File: C:\Users\bakas\Desktop\Retail ERP\client\Front-End\src\components\BillForm.jsx
 import React, { useState, useEffect } from 'react';
+import erpService from '../services/erpService';
+import { formatCurrency } from '../utils/formatters';
+import { calculateBillTotals } from '../utils/invoiceGenerator';
 
 function BillForm({ onBillAdded, onCancel }) {
   const [customers, setCustomers] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [billItems, setBillItems] = useState([]); // Array of { productId, quantity, priceAtSale, productName }
+  const [paymentMethod, setPaymentMethod] = useState('Credit Card');
+  const [billItems, setBillItems] = useState([]);
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // Confirm your backend's HTTP port here
-  const API_BASE_URL = 'http://localhost:5219/api';
-
-  // Fetch customers and products on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const customersResponse = await fetch(`${API_BASE_URL}/customers`);
-        const customersData = await customersResponse.json();
-        setCustomers(customersData);
-
-        const productsResponse = await fetch(`${API_BASE_URL}/products`);
-        const productsData = await productsResponse.json();
-        setProducts(productsData);
-
+        const [customersData, productsData] = await Promise.all([
+          erpService.getCustomers(),
+          erpService.getProducts()
+        ]);
+        setCustomers(customersData || []);
+        setProducts(productsData || []);
+        if (customersData?.length) setSelectedCustomerId(String(customersData[0].id));
       } catch (err) {
         console.error("Failed to fetch data for BillForm:", err);
-        setError("Failed to load customers or products. Please check backend.");
+        setError("Failed to load catalog data. Using local memory store.");
       }
     };
     fetchData();
   }, []);
 
-  // Calculate total amount of the bill
-  const calculateTotalAmount = () => {
-    return billItems.reduce((total, item) => total + (item.quantity * item.priceAtSale), 0);
-  };
+  const totals = calculateBillTotals(billItems, 0.08, discountPercent);
 
-  const handleProductSelection = (e) => {
-    const productId = parseInt(e.target.value);
-    if (!productId) return; // If "Select Product" is chosen
+  const handleAddProduct = (productId) => {
+    const prod = products.find(p => p.id === Number(productId));
+    if (!prod) return;
 
-    const selectedProduct = products.find(p => p.id === productId);
-
-    // Prevent adding the same product multiple times, or allow if quantity is editable
-    if (selectedProduct && !billItems.some(item => item.productId === productId)) {
-      setBillItems(prevItems => [
-        ...prevItems,
+    setBillItems(prev => {
+      const exists = prev.find(item => item.productId === prod.id);
+      if (exists) {
+        return prev.map(item =>
+          item.productId === prod.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [
+        ...prev,
         {
-          productId: selectedProduct.id,
-          productName: selectedProduct.name,
-          priceAtSale: selectedProduct.price, // Capture price at the time of sale
-          quantity: 1, // Default quantity
-          availableStock: selectedProduct.stockQuantity // For validation
+          productId: prod.id,
+          productName: prod.name,
+          priceAtSale: prod.price,
+          unitPrice: prod.price,
+          quantity: 1,
+          availableStock: prod.stockQuantity
         }
-      ]);
-    }
-    e.target.value = ''; // Reset select input
+      ];
+    });
   };
 
-  const handleQuantityChange = (index, newQuantity) => {
-    const updatedItems = [...billItems];
-    const item = updatedItems[index];
-    const parsedQuantity = parseInt(newQuantity);
-
-    if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
-      item.quantity = 0; // Or keep previous valid quantity
-    } else if (parsedQuantity > item.availableStock) {
-      item.quantity = item.availableStock; // Cap at available stock
-      setError(`Quantity for ${item.productName} cannot exceed available stock (${item.availableStock}).`);
-    } else {
-      item.quantity = parsedQuantity;
-      setError(null); // Clear error if quantity is valid
-    }
-    setBillItems(updatedItems);
+  const handleUpdateQuantity = (productId, delta) => {
+    setBillItems(prev =>
+      prev
+        .map(item => {
+          if (item.productId === productId) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean)
+    );
   };
 
-  const handleRemoveItem = (index) => {
-    setBillItems(prevItems => prevItems.filter((_, i) => i !== index));
+  const handleRemoveItem = (productId) => {
+    setBillItems(prev => prev.filter(item => item.productId !== productId));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    setSuccess(false);
-
     if (!selectedCustomerId) {
-      setError("Please select a customer.");
-      setSubmitting(false);
+      setError("Please select a customer for this transaction.");
       return;
     }
     if (billItems.length === 0) {
-      setError("Please add at least one product to the bill.");
-      setSubmitting(false);
-      return;
-    }
-    if (billItems.some(item => item.quantity <= 0)) {
-      setError("All product quantities must be greater than zero.");
-      setSubmitting(false);
+      setError("Cart is empty. Please add at least one product.");
       return;
     }
 
-    const billToSend = {
-      customerId: parseInt(selectedCustomerId),
-      totalAmount: calculateTotalAmount(),
-      // Ensure billItems are mapped to the exact structure the backend expects for BillItem model
-      items: billItems.map(item => ({ // Changed to 'items' to match backend Bill.Items property name
+    setSubmitting(true);
+    setError(null);
+
+    const billPayload = {
+      customerId: parseInt(selectedCustomerId, 10),
+      billDate: new Date().toISOString(),
+      totalAmount: totals.grandTotal,
+      paymentMethod,
+      items: billItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: item.priceAtSale // Changed to unitPrice to match backend BillItem.UnitPrice
+        unitPrice: item.priceAtSale,
+        itemTotal: item.quantity * item.priceAtSale
       }))
     };
 
-    console.log("Payload being sent to backend:", billToSend); // ADDED THIS LOG
-
     try {
-      const response = await fetch(`${API_BASE_URL}/bills`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(billToSend),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status} - ${response.statusText}. Details: ${errorText}`);
-      }
-
-      const newBill = await response.json();
+      await erpService.createBill(billPayload);
       setSuccess(true);
-      // Clear form
-      setSelectedCustomerId('');
-      setBillItems([]);
-      if (onBillAdded) {
-        onBillAdded(newBill); // Notify parent component
-      }
-      setTimeout(() => setSuccess(false), 3000);
-
+      if (onBillAdded) onBillAdded();
     } catch (err) {
       console.error("Failed to create bill:", err);
-      setError(err.message);
+      setError(err.message || "Failed to record transaction.");
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="card shadow-lg p-4 mb-4 rounded-3">
-      <h4 className="card-title text-success mb-4">Create New Bill</h4>
-      {success && (
-        <div className="alert alert-success alert-dismissible fade show" role="alert">
-          Bill created successfully!
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div className="card erp-card-elevated border-0 p-4 mb-4 shadow-lg erp-animate-fade-in">
+      <div className="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom" style={{ borderColor: 'var(--border-light)' }}>
+        <div className="d-flex align-items-center gap-2">
+          <div
+            className="d-flex align-items-center justify-content-center rounded-2 erp-gradient-primary text-white"
+            style={{ width: 34, height: 34 }}
+          >
+            <i className="bi bi-cart-check-fill" />
+          </div>
+          <div>
+            <h4 className="h5 fw-bold erp-heading mb-0">POS Checkout &amp; Billing Terminal</h4>
+            <small className="text-muted">Scan catalog items, apply discounts, and generate receipt</small>
+          </div>
         </div>
-      )}
+        <button type="button" className="btn-close" onClick={onCancel} aria-label="Close" />
+      </div>
+
       {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
-          <strong>Error:</strong> {error}
-          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <div className="alert alert-danger d-flex align-items-center gap-2 py-2" role="alert">
+          <i className="bi bi-exclamation-triangle-fill" />
+          <span>{error}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
-        {/* Customer Selection */}
-        <div className="mb-3">
-          <label htmlFor="customerSelect" className="form-label">Select Customer</label>
-          <select
-            id="customerSelect"
-            className="form-select"
-            value={selectedCustomerId}
-            onChange={(e) => setSelectedCustomerId(e.target.value)}
-            required
-            disabled={submitting}
-          >
-            <option value="">-- Select a Customer --</option>
-            {customers.map(customer => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name} ({customer.contact})
-              </option>
-            ))}
-          </select>
+      {success && (
+        <div className="alert alert-success d-flex align-items-center gap-2 py-2" role="alert">
+          <i className="bi bi-check-circle-fill" />
+          <span>Transaction successfully recorded and billed!</span>
         </div>
+      )}
 
-        {/* Product Selection for Bill Items */}
-        <div className="mb-3">
-          <label htmlFor="productSelect" className="form-label">Add Products to Bill</label>
-          <select
-            id="productSelect"
-            className="form-select"
-            onChange={handleProductSelection}
-            disabled={submitting}
-          >
-            <option value="">-- Select a Product --</option>
-            {products.map(product => (
-              <option key={product.id} value={product.id}>
-                {product.name} (${product.price.toFixed(2)}) - Stock: {product.stockQuantity}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="row g-4">
+        {/* Left: Product Picker & Customer Selection */}
+        <div className="col-12 col-lg-7">
+          <div className="row g-3 mb-4">
+            <div className="col-12 col-md-7">
+              <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Customer *</label>
+              <select
+                className="form-select"
+                value={selectedCustomerId}
+                onChange={(e) => setSelectedCustomerId(e.target.value)}
+              >
+                {customers.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.contact || c.email || 'Retail'})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Bill Items List */}
-        {billItems.length > 0 && (
-          <div className="mb-3">
-            <h6 className="mb-3">Bill Items:</h6>
-            <ul className="list-group mb-3">
-              {billItems.map((item, index) => (
-                <li key={item.productId} className="list-group-item d-flex justify-content-between align-items-center">
-                  <div>
-                    {item.productName} (${item.priceAtSale.toFixed(2)} each)
-                  </div>
-                  <div className="d-flex align-items-center">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm me-2"
-                      style={{ width: '80px' }}
-                      value={item.quantity}
-                      onChange={(e) => handleQuantityChange(index, e.target.value)}
-                      min="1"
-                      max={item.availableStock} // Max quantity is available stock
-                      disabled={submitting}
-                    />
-                    <span className="me-2">x ${item.priceAtSale.toFixed(2)} = ${(item.quantity * item.priceAtSale).toFixed(2)}</span>
-                    <button
-                      type="button"
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleRemoveItem(index)}
-                      disabled={submitting}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="text-end fs-5 fw-bold">
-              Total: <span className="text-success">${calculateTotalAmount().toFixed(2)}</span>
+            <div className="col-12 col-md-5">
+              <label className="form-label fw-semibold" style={{ fontSize: '0.875rem' }}>Payment Method</label>
+              <select
+                className="form-select"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="Credit Card">Credit Card</option>
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI / Digital</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+              </select>
             </div>
           </div>
-        )}
 
-        <div className="d-flex justify-content-end gap-2 mt-4">
-          <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={submitting}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-success" disabled={submitting}>
-            {submitting ? (
-              <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span className="ms-2">Creating...</span>
-              </>
-            ) : (
-              'Create Bill'
-            )}
-          </button>
+          <div className="d-flex align-items-center justify-content-between mb-2">
+            <span className="fw-semibold erp-heading" style={{ fontSize: '0.9rem' }}>Quick Add Catalog Item:</span>
+            <small className="text-muted">{products.length} items available</small>
+          </div>
+
+          <div className="row row-cols-1 row-cols-sm-2 g-2 mb-4" style={{ maxHeight: 300, overflowY: 'auto' }}>
+            {products.map(p => (
+              <div key={p.id} className="col">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary w-100 text-start p-2.5 rounded-3 d-flex justify-content-between align-items-center erp-card-elevated"
+                  onClick={() => handleAddProduct(p.id)}
+                  style={{ borderColor: 'var(--border-light)' }}
+                >
+                  <div className="overflow-hidden pe-2">
+                    <strong className="d-block text-truncate" style={{ fontSize: '0.85rem' }}>{p.name}</strong>
+                    <small className="text-muted">{formatCurrency(p.price)} • Stock: {p.stockQuantity}</small>
+                  </div>
+                  <i className="bi bi-plus-circle text-primary fs-5" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      </form>
+
+        {/* Right: Live Cart & Calculation Summary */}
+        <div className="col-12 col-lg-5">
+          <div className="card p-3 h-100 border erp-card-elevated" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+            <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom" style={{ borderColor: 'var(--border-light)' }}>
+              <span className="fw-bold erp-heading">Current Cart Items</span>
+              <span className="badge bg-primary rounded-pill">{billItems.length} items</span>
+            </div>
+
+            {billItems.length === 0 ? (
+              <div className="text-center py-5 text-muted my-auto">
+                <i className="bi bi-cart-x fs-1 d-block mb-2" />
+                <p className="mb-0 small">No items added to cart yet.<br />Click items on the left to add.</p>
+              </div>
+            ) : (
+              <div className="d-flex flex-column justify-content-between flex-grow-1">
+                <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                  {billItems.map(item => (
+                    <div key={item.productId} className="d-flex align-items-center justify-content-between p-2 mb-2 rounded bg-card border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-light)' }}>
+                      <div className="overflow-hidden pe-2">
+                        <strong className="d-block text-truncate" style={{ fontSize: '0.85rem' }}>{item.productName}</strong>
+                        <small className="text-muted">{formatCurrency(item.priceAtSale)} each</small>
+                      </div>
+
+                      <div className="d-flex align-items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border p-1 rounded-circle"
+                          style={{ width: 26, height: 26, lineHeight: 1 }}
+                          onClick={() => handleUpdateQuantity(item.productId, -1)}
+                        >
+                          -
+                        </button>
+                        <span className="fw-bold erp-mono px-1" style={{ fontSize: '0.85rem' }}>{item.quantity}</span>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-light border p-1 rounded-circle"
+                          style={{ width: 26, height: 26, lineHeight: 1 }}
+                          onClick={() => handleUpdateQuantity(item.productId, 1)}
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-link text-danger p-0 ms-1"
+                          onClick={() => handleRemoveItem(item.productId)}
+                        >
+                          <i className="bi bi-x-lg" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Subtotals & Grand Total */}
+                <div className="pt-3 border-top mt-2" style={{ borderColor: 'var(--border-light)' }}>
+                  <div className="d-flex justify-content-between text-muted small mb-1">
+                    <span>Subtotal</span>
+                    <span className="erp-mono">{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center text-muted small mb-1">
+                    <span>Discount (%)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="form-control form-control-sm text-end p-1 erp-mono"
+                      style={{ width: 64, height: 26 }}
+                      value={discountPercent}
+                      onChange={(e) => setDiscountPercent(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="d-flex justify-content-between text-muted small mb-2">
+                    <span>Estimated Tax (8%)</span>
+                    <span className="erp-mono">{formatCurrency(totals.taxAmount)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                    <span className="h6 fw-bold erp-heading mb-0">Total Due</span>
+                    <span className="h4 fw-bolder text-success erp-mono mb-0">
+                      {formatCurrency(totals.grandTotal)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="d-flex gap-2 mt-4">
+              <button
+                type="button"
+                className="btn btn-light rounded-pill flex-grow-1"
+                onClick={onCancel}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-success rounded-pill px-4 fw-semibold flex-grow-1 d-inline-flex align-items-center justify-content-center gap-2 shadow-sm"
+                onClick={handleSubmit}
+                disabled={submitting || billItems.length === 0}
+              >
+                {submitting && <span className="spinner-border spinner-border-sm" role="status" />}
+                <span>Checkout &amp; Print</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
