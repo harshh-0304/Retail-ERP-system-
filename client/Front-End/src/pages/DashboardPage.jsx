@@ -143,6 +143,24 @@ function DashboardPage() {
         />
       </div>
 
+      {/* Low Stock Warning Alert Banner */}
+      {lowStockProductsCount > 0 && (
+        <div className="card border-0 mb-4 p-3 shadow-sm" style={{ backgroundColor: 'var(--erp-warning-subtle)', borderLeft: '4px solid #f59e0b' }}>
+          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div className="d-flex align-items-center gap-2.5">
+              <i className="bi bi-exclamation-triangle-fill fs-5 text-warning" />
+              <div>
+                <strong className="text-dark-emphasis">Low Stock Alert:</strong>
+                <span className="ms-1 text-dark-emphasis" style={{ fontSize: '0.9rem' }}>
+                  {lowStockProductsCount} product{lowStockProductsCount > 1 ? 's are' : ' is'} below the 10-unit minimum reorder threshold.
+                </span>
+              </div>
+            </div>
+            <span className="badge bg-warning text-dark rounded-pill erp-badge-text">Action Required</span>
+          </div>
+        </div>
+      )}
+
       {/* KPI Stat Cards Grid */}
       <div className="row g-3 g-lg-4 mb-4">
         <div className="col-12 col-sm-6 col-xl-3">
@@ -253,6 +271,35 @@ function DashboardPage() {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Category Breakdown & Operations Health */}
+      <div className="card erp-card-elevated border-0 p-4 shadow-sm mb-4">
+        <h4 className="h5 fw-bold erp-heading mb-1">Catalog Department Distribution</h4>
+        <p className="text-muted small mb-4">Inventory allocation by product classification</p>
+
+        <div className="row g-3">
+          {[
+            { name: 'Electronics', count: 18, share: '36%', color: '#4f46e5' },
+            { name: 'Audio Systems', count: 12, share: '24%', color: '#0ea5e9' },
+            { name: 'Furniture & Ergonomics', count: 8, share: '16%', color: '#10b981' },
+            { name: 'Accessories & Cables', count: 15, share: '30%', color: '#f59e0b' }
+          ].map((cat, idx) => (
+            <div key={idx} className="col-12 col-sm-6 col-md-3">
+              <div className="p-3 rounded border" style={{ backgroundColor: 'var(--bg-subtle)', borderColor: 'var(--border-light)' }}>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <strong style={{ fontSize: '0.875rem' }}>{cat.name}</strong>
+                  <span className="badge rounded-pill erp-badge-text" style={{ backgroundColor: cat.color, color: '#fff' }}>
+                    {cat.share}
+                  </span>
+                </div>
+                <div className="progress" style={{ height: 6 }}>
+                  <div className="progress-bar" style={{ width: cat.share, backgroundColor: cat.color }} />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
