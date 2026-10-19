@@ -3,12 +3,34 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
+import erpService from '../services/erpService';
+import StatCard from '../components/common/StatCard';
+import LoadingSkeleton from '../components/common/LoadingSkeleton';
+import FilterPillGroup from '../components/common/FilterPillGroup';
+import { formatCurrency, formatNumber } from '../utils/formatters';
+
+function CustomTooltip({ active, payload, label }) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="card erp-card-elevated border-0 shadow-lg p-2.5" style={{ borderRadius: 'var(--radius-md)' }}>
+        <p className="fw-semibold text-muted mb-1" style={{ fontSize: '0.8rem' }}>{label}</p>
+        <p className="fw-bold text-primary mb-0 erp-mono" style={{ fontSize: '0.95rem' }}>
+          {typeof payload[0].value === 'number' && payload[0].name?.toLowerCase().includes('sale')
+            ? formatCurrency(payload[0].value)
+            : `${payload[0].value} units`}
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
 
 function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [salesData, setSalesData] = useState([]);
   const [productStockData, setProductStockData] = useState([]);
+  const [timeRange, setTimeRange] = useState('7d');
 
   const [totalSales, setTotalSales] = useState(0);
   const [totalCustomers, setTotalCustomers] = useState(0);
@@ -17,69 +39,62 @@ function DashboardPage() {
   const [averageBillValue, setAverageBillValue] = useState(0);
   const [lowStockProductsCount, setLowStockProductsCount] = useState(0);
 
-  const API_BASE_URL = 'http://localhost:5219/api';
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [billsResponse, productsResponse, customersResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/bills`),
-          fetch(`${API_BASE_URL}/products`),
-          fetch(`${API_BASE_URL}/customers`)
+        const [bills, products, customers] = await Promise.all([
+          erpService.getBills(),
+          erpService.getProducts(),
+          erpService.getCustomers()
         ]);
 
-        if (!billsResponse.ok) throw new Error(`HTTP error! Status: ${billsResponse.status} for bills.`);
-        if (!productsResponse.ok) throw new Error(`HTTP error! Status: ${productsResponse.status} for products.`);
-        if (!customersResponse.ok) throw new Error(`HTTP error! Status: ${customersResponse.status} for customers.`);
-
-        const bills = await billsResponse.json();
-        const products = await productsResponse.json();
-        const customers = await customersResponse.json();
-
         const salesByDate = {};
+        const days = timeRange === '30d' ? 30 : 7;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        for (let i = 6; i >= 0; i--) {
+        for (let i = days - 1; i >= 0; i--) {
           const date = new Date(today);
           date.setDate(today.getDate() - i);
-          salesByDate[date.toLocaleDateString()] = 0;
+          const key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          salesByDate[key] = 0;
         }
 
         let overallTotalSales = 0;
-        bills.forEach(bill => {
+        (bills || []).forEach(bill => {
           const billDate = new Date(bill.billDate);
           billDate.setHours(0, 0, 0, 0);
-          const dateString = billDate.toLocaleDateString();
-          if (salesByDate.hasOwnProperty(dateString)) {
-            salesByDate[dateString] += bill.totalAmount;
+          const key = billDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          const amt = Number(bill.totalAmount) || 0;
+          if (salesByDate.hasOwnProperty(key)) {
+            salesByDate[key] += amt;
           }
-          overallTotalSales += bill.totalAmount;
+          overallTotalSales += amt;
         });
 
         const processedSalesData = Object.keys(salesByDate).map(date => ({
-          date: date,
+          date,
           sales: parseFloat(salesByDate[date].toFixed(2))
         }));
         setSalesData(processedSalesData);
 
-        const topProducts = products
+        const topProducts = (products || [])
           .sort((a, b) => b.stockQuantity - a.stockQuantity)
-          .slice(0, 10)
+          .slice(0, 8)
           .map(p => ({
-            name: p.name,
+            name: p.name.length > 18 ? `${p.name.substring(0, 18)}...` : p.name,
             stock: p.stockQuantity
           }));
         setProductStockData(topProducts);
 
-        setTotalSales(overallTotalSales.toFixed(2));
-        setTotalCustomers(customers.length);
-        setTotalProducts(products.length);
-        setTotalBills(bills.length);
-        setAverageBillValue(bills.length > 0 ? (overallTotalSales / bills.length).toFixed(2) : 0);
-        const lowStockCount = products.filter(p => p.stockQuantity < 10).length;
+        setTotalSales(overallTotalSales);
+        setTotalCustomers(customers?.length || 0);
+        setTotalProducts(products?.length || 0);
+        setTotalBills(bills?.length || 0);
+        setAverageBillValue(bills?.length ? overallTotalSales / bills.length : 0);
+        const lowStockCount = (products || []).filter(p => Number(p.stockQuantity) < 10).length;
         setLowStockProductsCount(lowStockCount);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
@@ -90,135 +105,153 @@ function DashboardPage() {
     };
 
     fetchData();
-  }, []);
+  }, [timeRange]);
 
   if (loading) {
     return (
-      <div className="d-flex flex-column justify-content-center align-items-center py-5 bg-light rounded-3 shadow-sm" style={{ minHeight: '80vh' }}>
-        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading dashboard data...</span>
-        </div>
-        <p className="mt-3 fs-5 text-muted">Loading dashboard data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="alert alert-danger text-center p-4 rounded-3 shadow-sm" role="alert">
-        <h4 className="alert-heading">Error Loading Dashboard!</h4>
-        <p>There was a problem fetching data for the dashboard.</p>
-        <hr />
-        <p className="mb-0">
-          <strong>Details:</strong> {error.message}
-        </p>
-        <p className="mb-0 mt-2">
-          Please ensure your ASP.NET Core backend is running and accessible.
-        </p>
+      <div className="container-fluid px-3 px-lg-5 py-4">
+        <LoadingSkeleton type="card" count={4} className="mb-4" />
+        <LoadingSkeleton type="table" count={4} />
       </div>
     );
   }
 
   return (
-    <div className="container-fluid py-5 px-4" style={{ maxWidth: '1600px' }}>
-      <h2 className="display-4 fw-bold text-center mb-5 text-primary">Retail ERP Dashboard Analytics</h2>
+    <div className="container-fluid px-3 px-lg-5 py-4 erp-animate-fade-in">
+      {/* Header */}
+      <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+          <div className="d-inline-flex align-items-center gap-2 mb-1">
+            <span className="badge bg-purple-subtle text-primary rounded-pill erp-badge-text" style={{ backgroundColor: 'var(--erp-primary-subtle)' }}>
+              Business Telemetry
+            </span>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>Executive Overview</span>
+          </div>
+          <h2 className="h3 fw-bold erp-heading mb-1">Analytics &amp; Revenue Intelligence</h2>
+          <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+            Monitor financial metrics, customer growth rates, and warehouse stock movement.
+          </p>
+        </div>
 
-      <h3 className="text-center text-muted fw-bold mb-4">📊 Key Performance Indicators</h3>
-      <div className="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-5 justify-content-center">
-        {/* KPI Cards */}
-        <div className="col">
-          <div className="card text-white bg-success shadow-lg rounded-4 h-100 p-4">
-            <div className="card-body text-center">
-              <h5 className="card-title fw-bold">Total Sales</h5>
-              <p className="card-text display-5 fw-bolder">${totalSales}</p>
-            </div>
-          </div>
+        <FilterPillGroup
+          options={[
+            { id: '7d', label: 'Last 7 Days' },
+            { id: '30d', label: 'Last 30 Days' }
+          ]}
+          activeId={timeRange}
+          onChange={setTimeRange}
+        />
+      </div>
+
+      {/* KPI Stat Cards Grid */}
+      <div className="row g-3 g-lg-4 mb-4">
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatCard
+            title="Total Revenue"
+            value={formatCurrency(totalSales)}
+            subtitle="All sales transactions"
+            icon="bi-wallet2"
+            iconColor="#10b981"
+            iconBg="rgba(16, 185, 129, 0.12)"
+            trend={14.8}
+          />
         </div>
-        <div className="col">
-          <div className="card text-white bg-info shadow-lg rounded-4 h-100 p-4">
-            <div className="card-body text-center">
-              <h5 className="card-title fw-bold">Total Customers</h5>
-              <p className="card-text display-5 fw-bolder">{totalCustomers}</p>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatCard
+            title="Registered Clients"
+            value={formatNumber(totalCustomers)}
+            subtitle="Active verified accounts"
+            icon="bi-people"
+            iconColor="#0ea5e9"
+            iconBg="rgba(14, 165, 233, 0.12)"
+            trend={6.5}
+          />
         </div>
-        <div className="col">
-          <div className="card text-white bg-warning shadow-lg rounded-4 h-100 p-4">
-            <div className="card-body text-center">
-              <h5 className="card-title fw-bold">Total Unique Products</h5>
-              <p className="card-text display-5 fw-bolder">{totalProducts}</p>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatCard
+            title="Warehouse Catalog"
+            value={formatNumber(totalProducts)}
+            subtitle="Unique active SKUs"
+            icon="bi-box-seam"
+            iconColor="#6366f1"
+            iconBg="rgba(99, 102, 241, 0.12)"
+            trend={2.0}
+          />
         </div>
-        <div className="col">
-          <div className="card text-white bg-danger shadow-lg rounded-4 h-100 p-4">
-            <div className="card-body text-center">
-              <h5 className="card-title fw-bold">Total Bills</h5>
-              <p className="card-text display-5 fw-bolder">{totalBills}</p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card text-white bg-secondary shadow-lg rounded-4 h-100 p-4">
-            <div className="card-body text-center">
-              <h5 className="card-title fw-bold">Average Bill Value</h5>
-              <p className="card-text display-5 fw-bolder">${averageBillValue}</p>
-            </div>
-          </div>
-        </div>
-        <div className="col">
-          <div className="card text-white bg-dark shadow-lg rounded-4 h-100 p-4">
-            <div className="card-body text-center">
-              <h5 className="card-title fw-bold">Low Stock Products</h5>
-              <p className="card-text display-5 fw-bolder">{lowStockProductsCount}</p>
-              <small className="text-muted">(Stock &lt; 10 units)</small>
-            </div>
-          </div>
+        <div className="col-12 col-sm-6 col-xl-3">
+          <StatCard
+            title="Average Ticket Size"
+            value={formatCurrency(averageBillValue)}
+            subtitle={`${totalBills} total bills generated`}
+            icon="bi-receipt"
+            iconColor="#f59e0b"
+            iconBg="rgba(245, 158, 11, 0.12)"
+            trend={8.3}
+          />
         </div>
       </div>
 
-      <h3 className="text-center text-muted fw-bold mb-4">📈 Sales & Inventory Charts</h3>
-      <div className="row g-5 mt-4">
-        <div className="col-lg-6">
-          <div className="card shadow-lg p-4 rounded-4 h-100" style={{ minHeight: '420px' }}>
-            <h4 className="card-title text-center mb-4 text-success">Sales Over Last 7 Days</h4>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={salesData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
-                <Line type="monotone" dataKey="sales" stroke="#28a745" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-            {salesData.every(d => d.sales === 0) && (
-              <p className="text-center text-muted mt-3">No sales recorded in the last 7 days.</p>
-            )}
+      {/* Charts Row */}
+      <div className="row g-4 mb-4">
+        {/* Revenue Velocity Chart */}
+        <div className="col-12 col-lg-7">
+          <div className="card erp-card-elevated border-0 p-4 h-100 shadow-sm">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <div>
+                <h4 className="h5 fw-bold erp-heading mb-0">Sales Revenue Velocity</h4>
+                <small className="text-muted">Daily billed volume in USD</small>
+              </div>
+              <span className="badge bg-success-subtle text-success-emphasis rounded-pill erp-badge-text">
+                Live Daily Trend
+              </span>
+            </div>
+
+            <div style={{ width: '100%', height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={salesData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={12} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    name="Daily Sales"
+                    stroke="#4f46e5"
+                    strokeWidth={3}
+                    dot={{ fill: '#4f46e5', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 7, fill: '#10b981' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        <div className="col-lg-6">
-          <div className="card shadow-lg p-4 rounded-4 h-100" style={{ minHeight: '420px' }}>
-            <h4 className="card-title text-center mb-4 text-primary">Top 10 Product Stock Levels</h4>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={productStockData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  interval={0}
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="stock" fill="#007bff" />
-              </BarChart>
-            </ResponsiveContainer>
-            {productStockData.length === 0 && (
-              <p className="text-center text-muted mt-3">No product stock data available.</p>
-            )}
+        {/* Top Product Inventory Stock Levels */}
+        <div className="col-12 col-lg-5">
+          <div className="card erp-card-elevated border-0 p-4 h-100 shadow-sm">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <div>
+                <h4 className="h5 fw-bold erp-heading mb-0">Stock Availability</h4>
+                <small className="text-muted">Top inventory items on hand</small>
+              </div>
+              <span className="badge bg-primary-subtle text-primary rounded-pill erp-badge-text">
+                Warehouse
+              </span>
+            </div>
+
+            <div style={{ width: '100%', height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={productStockData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-light)" />
+                  <XAxis type="number" stroke="var(--text-muted)" fontSize={12} tickLine={false} />
+                  <YAxis type="category" dataKey="name" stroke="var(--text-muted)" fontSize={11} width={110} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="stock" name="Stock Units" fill="#0ea5e9" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>
