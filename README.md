@@ -1,5 +1,10 @@
 # Retail ERP System
 
+[![CI](https://github.com/harshh-0304/Retail-ERP-system-/actions/workflows/ci.yml/badge.svg)](https://github.com/harshh-0304/Retail-ERP-system-/actions/workflows/ci.yml)
+![React](https://img.shields.io/badge/react-19-61dafb)
+![.NET](https://img.shields.io/badge/.NET-9.0-512bd4)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 A full-stack Retail ERP (Enterprise Resource Planning) system, providing core functionalities for product, customer, and sales management.
 
 ## Project Overview
