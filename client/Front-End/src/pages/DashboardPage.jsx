@@ -27,7 +27,7 @@ function CustomTooltip({ active, payload, label }) {
 
 function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const [salesData, setSalesData] = useState([]);
   const [productStockData, setProductStockData] = useState([]);
   const [timeRange, setTimeRange] = useState('7d');
@@ -68,7 +68,7 @@ function DashboardPage() {
           billDate.setHours(0, 0, 0, 0);
           const key = billDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
           const amt = Number(bill.totalAmount) || 0;
-          if (salesByDate.hasOwnProperty(key)) {
+          if (Object.prototype.hasOwnProperty.call(salesByDate, key)) {
             salesByDate[key] += amt;
           }
           overallTotalSales += amt;
