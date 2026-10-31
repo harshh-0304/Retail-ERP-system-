@@ -14,7 +14,7 @@ import { formatCurrency, formatDate } from '../utils/formatters';
 function BillsPage() {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const [showBillForm, setShowBillForm] = useState(false);
   const [refreshBills, setRefreshBills] = useState(0);
   const [showDetailModal, setShowDetailModal] = useState(false);

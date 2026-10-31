@@ -11,7 +11,7 @@ import Pagination from '../components/common/Pagination';
 function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [refreshCustomers, setRefreshCustomers] = useState(0);

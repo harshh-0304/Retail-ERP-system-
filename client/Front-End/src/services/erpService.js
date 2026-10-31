@@ -47,7 +47,7 @@ export const erpService = {
       const data = await api.get(`/products${queryString}`);
       isUsingMock = false;
       return data;
-    } catch (err) {
+    } catch {
       isUsingMock = true;
       let items = getStored(STORAGE_PRODUCTS, INITIAL_PRODUCTS);
       if (search) {

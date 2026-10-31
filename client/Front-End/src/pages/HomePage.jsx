@@ -12,7 +12,7 @@ function HomePage({ onNavigate }) {
   const [recentBills, setRecentBills] = useState([]);
   const [loadingKpis, setLoadingKpis] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [kpiError, setKpiError] = useState(null);
+  const [, setKpiError] = useState(null);
 
   const fetchKpiData = async (manual = false) => {
     if (manual) setIsRefreshing(true);

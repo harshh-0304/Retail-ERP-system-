@@ -2,7 +2,7 @@ import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
 function Navbar({ onNavigate, currentPage = 'home' }) {
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   return (
     <header className="sticky-top erp-glass-panel border-bottom" style={{ zIndex: 1020, borderColor: 'var(--border-light)' }}>
       <nav className="navbar navbar-expand-lg py-2.5">

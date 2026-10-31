@@ -8,7 +8,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Modal from './components/common/Modal';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { ToastProvider, useToast } from './context/ToastContext';
+import { ToastProvider } from './context/ToastContext';
 
 function CommandPalette({ show, onClose, onNavigate }) {
   const [search, setSearch] = useState('');
